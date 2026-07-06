@@ -2,10 +2,6 @@
 
 *One click to provision a fully configured, monitored, domain-joined VM from nothing, and cleanly tear it back down.*
 
-![Provisioning pipeline flow](provisioning-pipeline.png)
-
-> The diagram above is a static image. The live, interactive version lives on [parsec-lab.com](https://parsec-lab.com) *(coming soon)*.
-
 ---
 
 ## The Problem
@@ -131,3 +127,7 @@ This pipeline works, but it's never really finished. A few things I'm planning o
 - **Self-service without me in the loop.** Right now it's a form and an approval. The goal is a proper self-service portal where a team can request a server, have it approved, and have it delivered without anyone touching the pipeline by hand.
 
 The through-line for all of it is the same idea that started the project: take something that used to be manual, fragile, and slow, and turn it into something repeatable, auditable, and boring, in the best possible way.
+
+![Provisioning pipeline flow](provisioning-pipeline.png)
+
+> The diagram above is a static image. The live, interactive version lives on [parsec-lab.com](https://parsec-lab.com) *(coming soon)*.
