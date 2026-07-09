@@ -21,7 +21,7 @@ I built it to sharpen my platform engineering skills, and I write everything dow
 
 I document each system the same way: what problem it solved, how it works, the decisions I made and why, and what I learned along the way.
 
-- **[The Self-Service Server Build Pipeline](writeups/provisioning-pipeline.md)** — one click to provision a fully configured, monitored VM from nothing, and cleanly tear it back down *(Completed)*
+- **[The Self-Service Server Build Pipeline](writeups/provisioning-pipeline-writeup.md)** — one click to provision a fully configured, monitored VM from nothing, and cleanly tear it back down *(Completed)*
 - *(more coming as I write them up)*
 
 ## A note on how this is built

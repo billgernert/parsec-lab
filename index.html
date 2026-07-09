@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bill Gernert - Platform &amp; Automation Engineer</title>
+  <meta name="description" content="Bill Gernert - platform and infrastructure automation. AutomationLab: a self-hosted, fully automated platform on a five-node Proxmox HA cluster.">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230a0e1a'/><polygon points='50,14 81,32 81,68 50,86 19,68 19,32' fill='none' stroke='%2300d4ff' stroke-width='5'/><circle cx='50' cy='50' r='9' fill='%2300ff96'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --fg: #e0e8ff;
+      --muted: #4a6080;
+      --cyan: #00d4ff;
+      --blue: #0066ff;
+      --green: #00ff96;
+      --border: rgba(0, 212, 255, 0.2);
+      --card: rgba(0, 212, 255, 0.03);
+      --mono: "Share Tech Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      --sans: "Exo 2", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--sans);
+      font-weight: 400;
+      line-height: 1.65;
+      min-height: 100vh;
+      padding: 56px 20px 80px;
+      background-image:
+        radial-gradient(ellipse at 20% 15%, rgba(0, 100, 255, 0.08) 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 85%, rgba(0, 200, 150, 0.07) 0%, transparent 55%);
+      background-attachment: fixed;
+    }
+    main { max-width: 760px; margin: 0 auto; }
+    a { color: var(--cyan); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .logo { display: block; width: 100%; max-width: 340px; height: auto; margin: 0 0 26px; }
+
+    h1 {
+      font-family: var(--sans);
+      font-weight: 700;
+      font-size: 2.5rem;
+      line-height: 1.1;
+      letter-spacing: 0.5px;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+    .tagline {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--cyan);
+      margin-bottom: 22px;
+    }
+    .lede { font-size: 1.1rem; color: var(--fg); font-weight: 300; }
+
+    h2 {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--cyan);
+      border-left: 3px solid var(--cyan);
+      padding-left: 10px;
+      margin: 52px 0 16px;
+    }
+    p { margin: 14px 0; color: var(--fg); font-weight: 300; }
+    p b { color: #fff; font-weight: 600; }
+    code {
+      font-family: var(--mono);
+      font-size: 0.86em;
+      color: var(--green);
+      background: rgba(0, 255, 150, 0.06);
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+    .note { color: var(--muted); font-size: 0.97rem; }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--card);
+      padding: 20px 22px;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--cyan), var(--blue));
+    }
+    .card p:first-of-type { margin-top: 4px; }
+
+    dl.skills { margin: 4px 0 0; }
+    dl.skills dt {
+      font-family: var(--mono);
+      font-size: 0.76rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--cyan);
+      margin-top: 18px;
+    }
+    dl.skills dt:first-of-type { margin-top: 0; }
+    dl.skills dd { margin: 5px 0 0; font-weight: 300; color: var(--fg); }
+
+    .links { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 4px; }
+    .links a {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--fg);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 11px 20px;
+      transition: border-color 0.15s, box-shadow 0.15s, color 0.15s;
+    }
+    .links a:hover {
+      text-decoration: none;
+      color: var(--cyan);
+      border-color: var(--cyan);
+      box-shadow: 0 0 14px rgba(0, 212, 255, 0.25);
+    }
+
+    footer {
+      margin-top: 52px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      letter-spacing: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    @media (max-width: 480px) { h1 { font-size: 2rem; } body { padding-top: 40px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <!-- parsec-lab logo, inlined from docs/parsec-lab-logo.svg for a zero-request load -->
+      <svg class="logo" viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Parsec Lab">
+        <defs>
+          <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#00d4ff"/>
+            <stop offset="100%" stop-color="#0066ff"/>
+          </linearGradient>
+          <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#00ff96"/>
+            <stop offset="100%" stop-color="#00cc66"/>
+          </linearGradient>
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <radialGradient id="bgGlow" cx="50%" cy="50%" r="60%">
+            <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.12"/>
+            <stop offset="100%" stop-color="#0a0e1a" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="110" cy="110" rx="120" ry="120" fill="url(#bgGlow)"/>
+        <g transform="translate(110,110)" filter="url(#glow)">
+          <polygon points="0,-62 54,-31 54,31 0,62 -54,31 -54,-31" fill="none" stroke="url(#cyanGrad)" stroke-width="3"/>
+          <polygon points="0,-40 35,-20 35,20 0,40 -35,20 -35,-20" fill="rgba(0,212,255,0.06)" stroke="rgba(0,212,255,0.4)" stroke-width="1.5"/>
+          <circle cx="0" cy="-40" r="4" fill="#00d4ff"/>
+          <circle cx="35" cy="-20" r="4" fill="#00ff96"/>
+          <circle cx="35" cy="20" r="4" fill="#00d4ff"/>
+          <circle cx="0" cy="40" r="4" fill="#00ff96"/>
+          <circle cx="-35" cy="20" r="4" fill="#00d4ff"/>
+          <circle cx="-35" cy="-20" r="4" fill="#00ff96"/>
+          <circle cx="0" cy="0" r="8" fill="url(#greenGrad)"/>
+          <line x1="0" y1="0" x2="0" y2="-40" stroke="rgba(0,212,255,0.5)" stroke-width="1.5"/>
+          <line x1="0" y1="0" x2="35" y2="-20" stroke="rgba(0,255,150,0.5)" stroke-width="1.5"/>
+          <line x1="0" y1="0" x2="35" y2="20" stroke="rgba(0,212,255,0.5)" stroke-width="1.5"/>
+          <line x1="0" y1="0" x2="0" y2="40" stroke="rgba(0,255,150,0.5)" stroke-width="1.5"/>
+          <line x1="0" y1="0" x2="-35" y2="20" stroke="rgba(0,212,255,0.5)" stroke-width="1.5"/>
+          <line x1="0" y1="0" x2="-35" y2="-20" stroke="rgba(0,255,150,0.5)" stroke-width="1.5"/>
+        </g>
+        <text x="210" y="100" font-family="'Share Tech Mono', monospace" font-size="46" letter-spacing="6" fill="#00d4ff" filter="url(#glow)">PARSEC</text>
+        <text x="212" y="142" font-family="'Share Tech Mono', monospace" font-size="28" letter-spacing="14" fill="#e0e8ff">LAB</text>
+        <line x1="212" y1="158" x2="500" y2="158" stroke="rgba(0,212,255,0.3)" stroke-width="1"/>
+        <text x="212" y="180" font-family="'Share Tech Mono', monospace" font-size="12" letter-spacing="3" fill="#4a6080">HOMELAB &#183; DEVOPS &#183; INFRASTRUCTURE</text>
+      </svg>
+
+      <h1>Bill Gernert</h1>
+      <p class="tagline">Platform &amp; infrastructure automation</p>
+      <p class="lede">
+        I build the kind of automation that runs a data center: provisioning, GitOps, monitoring,
+        self-healing, identity, and secrets - wired together end to end and treated as production.
+        The proof is a lab I run and operate as if it were a real platform.
+      </p>
+    </header>
+
+    <section>
+      <h2>AutomationLab</h2>
+      <div class="card">
+        <p>
+          AutomationLab is a self-hosted platform on a <b>five-node Proxmox HA cluster</b>, automated
+          from bare VM to running service and documented as I go. It is a working system, not a demo:
+          the same pipelines, guardrails, and runbooks an on-call engineer would actually use.
+        </p>
+        <p><b>Provisioning is a pipeline, not a checklist.</b> A Jenkins job drives a request through
+          NetBox IP allocation, per-VM Terraform workspaces (Proxmox), a human approval gate, Zabbix
+          registration with a unique per-host PSK in Vault, and Ansible configuration - with roll-forward
+          on partial failure and a clean decommission path that reverses every step. Linux and Windows.</p>
+        <p><b>Everything is config-as-code, reviewed like code.</b> Argo CD reconciles the cluster; the
+          Jenkins controller config lives in git; every change is a branch and a PR to <code>main</code>
+          behind branch protection, with yamllint / ansible-lint / terraform lint gates and Trivy +
+          Gitleaks security scanning as required checks.</p>
+        <p><b>It heals and reports on itself.</b> A Zabbix classify-and-heal engine detects failures and
+          applies OS-aware fixes, recording every outcome so heals are auditable; a Tier-1 path restarts
+          stuck services in minutes. Alerts route through a self-hosted mail platform to role-based groups.</p>
+        <p><b>Identity, secrets, and edge are first-class.</b> On-prem Active Directory syncs to Entra ID
+          via AD Connect; the full user lifecycle (provision, deprovision, disable-first offboarding,
+          four-eyes approval, delayed cleanup sweep) is automated, backed by an internal PKI (AD CS).
+          HashiCorp Vault (AppRole) holds every secret. External access is a Cloudflare Tunnel to Traefik
+          ingress with Access SSO on every app.</p>
+        <p class="note">Built with an AI-assisted workflow (Claude Code) held to the same discipline as the
+          platform: design docs before code, one PR per change, and a runbook for every pipeline.</p>
+      </div>
+
+    </section>
+
+    <section>
+      <h2>Skills</h2>
+      <dl class="skills">
+        <dt>Cloud &amp; IaC</dt>
+        <dd>AWS, Azure (Entra ID, Intune, O365), Terraform, Packer, Ansible</dd>
+        <dt>CI/CD &amp; GitOps</dt>
+        <dd>Jenkins (shared libraries, JCasC), Argo CD, Gitea Actions, GitOps workflows, Kaniko</dd>
+        <dt>Containers &amp; Orchestration</dt>
+        <dd>Kubernetes (K3s), Helm, Docker, cert-manager, External Secrets</dd>
+        <dt>Languages &amp; APIs</dt>
+        <dd>Python, PowerShell, Groovy, REST APIs, Microsoft Graph API, Go (familiar)</dd>
+        <dt>Identity &amp; Security</dt>
+        <dd>Active Directory, Entra ID, hybrid identity (AD Connect), SAML/OIDC SSO, MFA, Conditional Access, gMSA, HashiCorp Vault, PKI (AD CS, step-ca, Let's Encrypt)</dd>
+        <dt>Observability</dt>
+        <dd>Zabbix (API automation, self-healing), Prometheus, Grafana, SCOM, SolarWinds</dd>
+        <dt>Virtualization &amp; Network</dt>
+        <dd>VMware vSphere/vSAN/Horizon, Proxmox VE (HA clusters), OPNsense, VLAN design, Cloudflare Zero Trust</dd>
+      </dl>
+    </section>
+
+    <section>
+      <h2>Elsewhere</h2>
+      <div class="links">
+        <a href="https://github.com/billgernert" rel="me">GitHub</a>
+        <a href="https://www.linkedin.com/in/billgernert" rel="me">LinkedIn</a>
+      </div>
+    </section>
+
+    <footer>parsec-lab.com &#183; built and operated by Bill Gernert</footer>
+  </main>
+</body>
+</html>
