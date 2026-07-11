@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Jenkins - Skills - Bill Gernert</title>
-  <meta name="description" content="Jenkins in AutomationLab - writeup coming. The config-as-code controller that drives every provisioning pipeline.">
+  <meta name="description" content="How I run Jenkins as the config-as-code automation controller of AutomationLab - JCasC, pipeline-as-code, and a fail-closed four-eyes deprovision control.">
   <meta name="color-scheme" content="dark">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230a0e1a'/><polygon points='50,14 81,32 81,68 50,86 19,68 19,32' fill='none' stroke='%2300d4ff' stroke-width='5'/><circle cx='50' cy='50' r='9' fill='%2300ff96'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,26 +25,63 @@
     <header class="skill-head">
       <span class="badge" data-accent="green">CI/CD &amp; GitOps</span>
       <h1>Jenkins</h1>
-      <p class="descriptor">The config-as-code controller that drives every provisioning pipeline.</p>
+      <p class="descriptor">The config-as-code controller that drives every provisioning and lifecycle pipeline in the lab - defined in git, restorable from git, and guarded by real approval controls.</p>
     </header>
 
     <div class="skill-body">
       <section class="block">
         <h2>What it is &amp; why I use it</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <p>Jenkins is the automation engine of AutomationLab. Every meaningful action - stand up
+          a VM, register it for monitoring, configure it, decommission it, offboard a user - runs
+          as a Jenkins pipeline. It is the place where the lab's many tools (the IPAM, Terraform,
+          the secrets manager, the monitoring API, configuration management, identity) are
+          orchestrated into one repeatable flow with approval gates and an audit trail.</p>
+        <p>I run it deliberately in the "boring, dependable" spot: the controller itself is
+          <b>config-as-code</b>, the jobs are <b>pipeline-as-code</b>, and its secrets come from
+          Vault at runtime. A controller I can delete and rebuild from git is a controller I
+          actually trust.</p>
       </section>
 
       <section class="block">
         <h2>How I use it in the lab</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <ul>
+          <li><b>Configuration as Code (JCasC).</b> The controller's configuration - security
+            realm, credentials wiring, jobs, agent settings - lives in git and is applied
+            declaratively. There is no hand-clicked controller state to lose.</li>
+          <li><b>Pipeline-as-code.</b> Each job is a <code>Jenkinsfile-&lt;purpose&gt;</code> in
+            the repo, reviewed like any other change. The provisioning flow, with its allocate
+            -&gt; plan -&gt; approve -&gt; configure -&gt; register stages, is one such file.</li>
+          <li><b>Secrets from Vault, not from Jenkins.</b> The controller authenticates to Vault
+            with an AppRole and pulls credentials at run time, so tokens are not stored in job
+            config or printed in logs.</li>
+          <li><b>Approval gates for irreversible actions.</b> Destroying infrastructure or
+            disabling an identity pauses for a human decision - and, for the most sensitive flow,
+            enforces segregation of duties (below).</li>
+          <li><b>Roll-forward semantics.</b> Pipelines are written so a partial failure cleans up
+            after itself rather than leaving half-built state, and a decommission reverses every
+            step provisioning took.</li>
+        </ul>
       </section>
 
       <section class="block">
         <h2>Architecture</h2>
+        <p>The pipeline worth calling out is the <b>four-eyes deprovision</b> control - offboarding
+          an identity is the most destructive thing the lab automates, so it is the most guarded.</p>
+        <ul>
+          <li><b>Segregation of duties.</b> The person who <i>requests</i> a deprovision cannot be
+            the person who <i>approves</i> it. The pipeline captures both identities and refuses
+            to proceed if they are the same.</li>
+          <li><b>Approver allowlist.</b> Approval is only accepted from an explicit allowlist of
+            authorized approvers - not from "whoever happens to have a Jenkins login."</li>
+          <li><b>Disable first, delete later.</b> Offboarding disables the account immediately and
+            defers destructive cleanup to a later sweep, so a mistake has a recovery window.</li>
+        </ul>
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Diagram coming</span>
-          <span class="sub">A scrubbed architecture diagram - no addresses or internal hostnames.</span>
+          <span class="sub">The four-eyes flow: request -&gt; identity capture -&gt; approver
+            allowlist check -&gt; disable -&gt; delayed cleanup. Scrubbed of usernames and
+            addresses.</span>
         </div>
       </section>
 
@@ -53,27 +90,68 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Screenshot coming</span>
-          <span class="sub">A screenshot with internal identifiers cropped or redacted per the publishing checklist.</span>
+          <span class="sub">A pipeline run paused at the approval gate, showing the segregation
+            check in effect. Captured per the publishing checklist - usernames, hostnames, and
+            addresses redacted.</span>
         </div>
       </section>
 
       <section class="block">
         <h2>Lessons learned &amp; gotchas</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="callout">
+          <span class="tag">Gotcha - an approval gate can fail open</span>
+          A four-eyes control is only as good as its <b>failure</b> behavior. In hardening the
+          deprovision flow I found the dangerous case was not a wrong approver - it was a
+          <b>blank</b> one. An empty requester or approver field, or an unchecked identity, has to
+          be treated as a hard stop, not a pass. The fix was to make the control <b>fail closed</b>:
+          missing or malformed identity aborts the run, and approval is matched against an explicit
+          allowlist rather than merely "not empty."
+        </div>
+        <ul>
+          <li><b>Segregation of duties must be enforced in code, not policy.</b> "Don't approve
+            your own request" written in a runbook is a suggestion. The same rule as a pipeline
+            check that compares the two identities and aborts on a match is a control.</li>
+          <li><b>Allowlist, don't blocklist, your approvers.</b> Enumerating who <i>may</i> approve
+            is safe by default; trying to enumerate who may not is a hole waiting to be found.</li>
+          <li><b>A rebuildable controller changes how you operate.</b> Because the controller is
+            JCasC in git, I test config changes as PRs and can restore the whole controller from
+            source. Once you have that, you stop being afraid to touch it - which is the point.</li>
+          <li><b>Keep the Jenkins credential store thin.</b> The more secrets Jenkins holds
+            natively, the bigger the prize it becomes. Pulling from Vault at run time keeps the
+            controller from turning into the crown-jewels box.</li>
+        </ul>
       </section>
 
       <section class="block">
         <h2>Impact</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="stats">
+          <div class="stat">
+            <div class="num">1 file</div>
+            <div class="label">per pipeline, in git</div>
+          </div>
+          <div class="stat">
+            <div class="num">2 people</div>
+            <div class="label">to deprovision an identity</div>
+          </div>
+          <div class="stat">
+            <div class="num">Fail</div>
+            <div class="label">closed on blank input</div>
+          </div>
+        </div>
+        <p>Jenkins is where the lab's guardrails actually live. Config-as-code makes the platform
+          reproducible; pipeline-as-code makes every change reviewable; and hardening the
+          highest-stakes pipeline to fail closed is the difference between automation that is
+          convenient and automation you can trust with destructive actions.</p>
       </section>
 
       <section class="block">
         <h2>Code &amp; further reading</h2>
         <div class="links">
-          <a href="#" aria-disabled="true">Repo (link coming)</a>
+          <a href="#" aria-disabled="true">Pipeline library (link coming)</a>
+          <a href="https://www.jenkins.io/projects/jcasc/" rel="noopener">Jenkins Configuration as Code</a>
         </div>
-        <p class="note">Repository links point to scrubbed, public-safe versions of the lab's
-          code. Internal addresses, hostnames, and secrets are never published.</p>
+        <p class="note">Published pipeline and JCasC code is scrubbed of internal addresses,
+          hostnames, usernames, and credential wiring before it goes public.</p>
       </section>
     </div>
 

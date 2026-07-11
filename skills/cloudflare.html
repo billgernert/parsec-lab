@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cloudflare Tunnel / Access - Skills - Bill Gernert</title>
-  <meta name="description" content="Cloudflare Tunnel / Access in AutomationLab - writeup coming. Zero-trust edge: an outbound tunnel plus SSO on every published app.">
+  <meta name="description" content="How I expose the lab safely with Cloudflare - an outbound-only tunnel with no inbound firewall holes, and Access SSO on every app with service tokens for automation.">
   <meta name="color-scheme" content="dark">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230a0e1a'/><polygon points='50,14 81,32 81,68 50,86 19,68 19,32' fill='none' stroke='%2300d4ff' stroke-width='5'/><circle cx='50' cy='50' r='9' fill='%2300ff96'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,18 +25,41 @@
     <header class="skill-head">
       <span class="badge" data-accent="cyan">Networking &amp; Edge</span>
       <h1>Cloudflare Tunnel / Access</h1>
-      <p class="descriptor">Zero-trust edge: an outbound tunnel plus SSO on every published app.</p>
+      <p class="descriptor">The lab's front door done zero-trust - an outbound-only tunnel so there are no inbound holes to attack, and identity-aware SSO on every published app.</p>
     </header>
 
     <div class="skill-body">
       <section class="block">
         <h2>What it is &amp; why I use it</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <p>Cloudflare Tunnel and Cloudflare Access are how the lab is reachable from the internet
+          without punching holes in the firewall. A tunnel connector inside the network makes an
+          <b>outbound</b> connection to Cloudflare; traffic to the public hostnames is delivered
+          back down that connection to the internal ingress. There is <b>no inbound port
+          open</b> on the edge at all.</p>
+        <p>In front of the apps, Cloudflare Access enforces SSO: every published service requires
+          an authenticated, authorized identity before a request ever reaches it. The two together
+          give me a public presence with a genuinely small attack surface - the origin is never
+          directly exposed, and nothing is anonymous.</p>
       </section>
 
       <section class="block">
         <h2>How I use it in the lab</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <ul>
+          <li><b>Outbound-only tunnel.</b> A connector dials out to the edge; the origin is not
+            addressable from the internet, so there is nothing to port-scan or brute-force at the
+            perimeter.</li>
+          <li><b>Ingress behind the tunnel.</b> The tunnel hands traffic to the internal reverse
+            proxy, which routes to each service - so adding an app is an ingress rule, not a
+            firewall change.</li>
+          <li><b>SSO on every app.</b> Access sits in front of each public hostname; human users
+            authenticate through the identity provider before the app is reached.</li>
+          <li><b>TLS from the automated CA.</b> Certificates for internal names are issued and
+            renewed automatically by cert-manager via a DNS-01 challenge, so nothing depends on a
+            human remembering to rotate a cert.</li>
+          <li><b>Service tokens for machines.</b> Automation that must call an Access-protected app
+            presents a non-interactive service token, so the SSO wall stays up without blocking
+            legitimate machine-to-machine calls (see the gotcha).</li>
+        </ul>
       </section>
 
       <section class="block">
@@ -44,7 +67,9 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Diagram coming</span>
-          <span class="sub">A scrubbed architecture diagram - no addresses or internal hostnames.</span>
+          <span class="sub">Internet -&gt; Cloudflare edge (Access SSO) -&gt; outbound tunnel
+            -&gt; internal ingress -&gt; app, with no inbound port on the origin. Scrubbed of
+            hostnames, connector addresses, and cert names.</span>
         </div>
       </section>
 
@@ -53,27 +78,69 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Screenshot coming</span>
-          <span class="sub">A screenshot with internal identifiers cropped or redacted per the publishing checklist.</span>
+          <span class="sub">The Access login gate in front of a published app, and a healthy
+            tunnel with no inbound firewall rule behind it. Captured per the publishing checklist -
+            hostnames and addresses redacted.</span>
         </div>
       </section>
 
       <section class="block">
         <h2>Lessons learned &amp; gotchas</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="callout">
+          <span class="tag">Gotcha - SSO in front of an app blocks your automation too</span>
+          Access protects humans beautifully and machines not at all: a script hitting an
+          SSO-fronted hostname gets an interactive login page, not the app, and fails in a way that
+          looks like a broken credential. The wrong fix is to carve an exception into the policy -
+          that quietly reopens the very door you closed. The right fix is an Access <b>service
+          token</b>: a non-interactive credential the automation presents to satisfy Access
+          without weakening it for anyone else. Keep the wall up; give machines a proper key,
+          not a hole.
+        </div>
+        <ul>
+          <li><b>Outbound-only changes the threat model.</b> With no inbound port, the classic
+            "scan the perimeter and pound on the login" attack has nothing to aim at. It is worth
+            the slightly less obvious mental model that traffic arrives "backwards" down a tunnel.</li>
+          <li><b>Automate certificate renewal or it will bite you.</b> A cert someone has to
+            remember to renew is an outage with a date on it. DNS-01 issuance via cert-manager
+            makes renewal a non-event.</li>
+          <li><b>Identity at the edge is not a substitute for identity at the app.</b> Access is a
+            strong outer gate, but services still enforce their own authorization - defense in
+            depth, not a single wall.</li>
+        </ul>
       </section>
 
       <section class="block">
         <h2>Impact</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="stats">
+          <div class="stat">
+            <div class="num">0</div>
+            <div class="label">inbound ports open</div>
+          </div>
+          <div class="stat">
+            <div class="num">SSO</div>
+            <div class="label">on every public app</div>
+          </div>
+          <div class="stat">
+            <div class="num">Auto</div>
+            <div class="label">TLS issuance / renewal</div>
+          </div>
+        </div>
+        <p>Cloudflare Tunnel and Access let the lab have a real public presence while keeping the
+          origin unreachable and every app behind an identity gate. The service-token lesson is the
+          one that generalizes: a security control that breaks legitimate automation will get
+          weakened by whoever is under deadline - so the durable answer is to give machines a proper
+          credential, never to poke a hole in the wall.</p>
       </section>
 
       <section class="block">
         <h2>Code &amp; further reading</h2>
         <div class="links">
-          <a href="#" aria-disabled="true">Repo (link coming)</a>
+          <a href="#" aria-disabled="true">Tunnel / ingress config (link coming)</a>
+          <a href="https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/" rel="noopener">Cloudflare Tunnel</a>
+          <a href="https://developers.cloudflare.com/cloudflare-one/identity/service-tokens/" rel="noopener">Access service tokens</a>
         </div>
-        <p class="note">Repository links point to scrubbed, public-safe versions of the lab's
-          code. Internal addresses, hostnames, and secrets are never published.</p>
+        <p class="note">Published config is scrubbed of hostnames, connector addresses, cert
+          names, and any token material before it goes public.</p>
       </section>
     </div>
 

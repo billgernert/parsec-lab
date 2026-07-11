@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Kaniko - Skills - Bill Gernert</title>
-  <meta name="description" content="Kaniko in AutomationLab - writeup coming. Daemonless, in-cluster container image builds.">
+  <meta name="description" content="How I build container images in-cluster with Kaniko - daemonless builds, and why I verify every build by pushed digest, not by log success.">
   <meta name="color-scheme" content="dark">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230a0e1a'/><polygon points='50,14 81,32 81,68 50,86 19,68 19,32' fill='none' stroke='%2300d4ff' stroke-width='5'/><circle cx='50' cy='50' r='9' fill='%2300ff96'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,18 +25,35 @@
     <header class="skill-head">
       <span class="badge" data-accent="green">CI/CD &amp; GitOps</span>
       <h1>Kaniko</h1>
-      <p class="descriptor">Daemonless, in-cluster container image builds.</p>
+      <p class="descriptor">Daemonless container image builds that run as an ordinary pod inside the cluster - no privileged Docker socket, and every build trusted only after its digest changes.</p>
     </header>
 
     <div class="skill-body">
       <section class="block">
         <h2>What it is &amp; why I use it</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <p>Kaniko builds container images from a Dockerfile <b>inside a Kubernetes pod</b>, without
+          a Docker daemon and without needing the privileged access that mounting the host's
+          Docker socket would require. In AutomationLab it is how the custom images the pipelines
+          depend on - like the provisioning agent image - get built and pushed to the registry.</p>
+        <p>I use it because the alternative, bind-mounting a Docker socket into CI, hands the job a
+          root-equivalent foothold on the node. Kaniko keeps image builds inside the same
+          least-privilege, scheduler-managed world as everything else the cluster runs.</p>
       </section>
 
       <section class="block">
         <h2>How I use it in the lab</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <ul>
+          <li><b>Builds as pods.</b> A build is a one-shot pod: it checks out the context, runs
+            the Dockerfile, and pushes the result to the registry, then completes.</li>
+          <li><b>Agent images for the pipelines.</b> The tools a provisioning run needs - the IaC
+            binaries, configuration-management collections, cloud SDKs - are baked into an agent
+            image built this way, so pipeline runs start from a known, versioned toolset.</li>
+          <li><b>Registry push with scoped credentials.</b> The push credential is provided to the
+            build pod as a mounted secret, not embedded in the image or the manifest.</li>
+          <li><b>Digest-verified promotion.</b> A build is only "done" once I have confirmed the
+            <b>pushed digest changed</b> from the previous build - see the gotcha below, which
+            cost me real time to learn.</li>
+        </ul>
       </section>
 
       <section class="block">
@@ -44,7 +61,9 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Diagram coming</span>
-          <span class="sub">A scrubbed architecture diagram - no addresses or internal hostnames.</span>
+          <span class="sub">Build flow: git context -&gt; Kaniko build pod -&gt; registry push
+            -&gt; digest check -&gt; pipelines consume the new image. Scrubbed of registry
+            addresses and hostnames.</span>
         </div>
       </section>
 
@@ -53,27 +72,68 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Screenshot coming</span>
-          <span class="sub">A screenshot with internal identifiers cropped or redacted per the publishing checklist.</span>
+          <span class="sub">A build pod's log ending in a successful push, next to the registry
+            showing the new digest. Captured per the publishing checklist - no registry
+            addresses or credentials.</span>
         </div>
       </section>
 
       <section class="block">
         <h2>Lessons learned &amp; gotchas</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="callout">
+          <span class="tag">Gotcha - a "successful" build log can be a lie</span>
+          A one-shot Kaniko build pod can silently <b>reuse a stale, already-completed pod</b>.
+          If the pod already exists, <code>kubectl apply</code> reports <code>configured</code>,
+          not <code>created</code>, and does not re-run anything - so you happily tail logs from
+          an <b>old</b> build and conclude the new one worked. Nothing errors. You just deployed
+          the previous image and believed it was the new one.
+        </div>
+        <p>The rule I now follow every time, without exception:</p>
+        <ul>
+          <li><b>Delete the build pod before applying.</b> Never rely on apply to replace a
+            completed pod; remove it first so the new build actually runs.</li>
+          <li><b>Confirm apply reports <code>created</code>, not <code>configured</code>.</b> That
+            one word is the difference between a fresh build and a no-op.</li>
+          <li><b>Trust the digest, not the log.</b> Verify the pushed image digest <b>changed</b>
+            from the prior build. A green log proves a pod ran; only a changed digest proves
+            <i>this</i> build produced <i>this</i> image.</li>
+          <li><b>Verify by digest everywhere downstream.</b> The same principle carries into how
+            the pipelines pin images: a tag can move, a digest cannot, so pinning by digest is
+            what makes "which image ran?" answerable after the fact.</li>
+        </ul>
       </section>
 
       <section class="block">
         <h2>Impact</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="stats">
+          <div class="stat">
+            <div class="num">0</div>
+            <div class="label">privileged Docker sockets</div>
+          </div>
+          <div class="stat">
+            <div class="num">Digest</div>
+            <div class="label">the real proof of a build</div>
+          </div>
+          <div class="stat">
+            <div class="num">1 image</div>
+            <div class="label">versioned pipeline toolset</div>
+          </div>
+        </div>
+        <p>Kaniko lets the lab build its own tooling images the same way it runs everything else -
+          as scheduled, unprivileged workloads. The lasting lesson was less about Kaniko and more
+          about <b>verification discipline</b>: a log that says "success" is not evidence the
+          thing you intended actually happened. Checking the digest turned a class of silent,
+          confusing failures into something I can no longer fool myself about.</p>
       </section>
 
       <section class="block">
         <h2>Code &amp; further reading</h2>
         <div class="links">
-          <a href="#" aria-disabled="true">Repo (link coming)</a>
+          <a href="#" aria-disabled="true">Build manifests (link coming)</a>
+          <a href="https://github.com/GoogleContainerTools/kaniko" rel="noopener">Kaniko</a>
         </div>
-        <p class="note">Repository links point to scrubbed, public-safe versions of the lab's
-          code. Internal addresses, hostnames, and secrets are never published.</p>
+        <p class="note">Published build manifests are scrubbed of registry addresses, hostnames,
+          and credential wiring before they go public.</p>
       </section>
     </div>
 

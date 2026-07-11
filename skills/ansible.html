@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Ansible - Skills - Bill Gernert</title>
-  <meta name="description" content="Ansible in AutomationLab - writeup coming. Post-provision configuration and role-based hardening of every host.">
+  <meta name="description" content="How I use Ansible to configure and harden every host in AutomationLab - role-based, idempotent, and ordered so a firewall change never locks the box out.">
   <meta name="color-scheme" content="dark">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230a0e1a'/><polygon points='50,14 81,32 81,68 50,86 19,68 19,32' fill='none' stroke='%2300d4ff' stroke-width='5'/><circle cx='50' cy='50' r='9' fill='%2300ff96'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,18 +25,37 @@
     <header class="skill-head">
       <span class="badge" data-accent="cyan">Platform &amp; Orchestration</span>
       <h1>Ansible</h1>
-      <p class="descriptor">Post-provision configuration and role-based hardening of every host.</p>
+      <p class="descriptor">Post-provision configuration and hardening for every host - idempotent roles applied in a deliberate order, because the order is what keeps a firewall change from locking the box out.</p>
     </header>
 
     <div class="skill-body">
       <section class="block">
         <h2>What it is &amp; why I use it</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <p>Ansible is the configuration-management layer of AutomationLab. Terraform brings a VM
+          into existence; Ansible turns that bare VM into a configured, hardened, monitored host.
+          It runs as the <b>configure</b> stage of the provisioning pipeline, after the machine
+          exists and before it is handed over as ready.</p>
+        <p>I use it because configuration should be <b>declarative and idempotent</b>: the same
+          play run twice leaves the host in the same state, so "converge the host to what the
+          role says" replaces a pile of one-off setup commands nobody can reproduce.</p>
       </section>
 
       <section class="block">
         <h2>How I use it in the lab</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <ul>
+          <li><b>Roles, not scripts.</b> Each concern is a role with documented defaults - a
+            firewall role, a time-sync role, a monitoring-agent role - composed into a single
+            host-configuration play.</li>
+          <li><b>Runs from the pipeline, as an unprivileged user.</b> The configure stage runs
+            Ansible from the CI agent under a dedicated automation user, not root, with the
+            collection path pinned so runs are reproducible regardless of which agent picks up
+            the job.</li>
+          <li><b>Secrets pulled at runtime.</b> Anything sensitive a role needs comes from the
+            secrets manager during the run - nothing sensitive is stored in inventory or vars in
+            the repo.</li>
+          <li><b>Deliberate role order.</b> The play applies firewall, then time-sync, then the
+            monitoring agent - and that order is load-bearing, not cosmetic (see the gotcha).</li>
+        </ul>
       </section>
 
       <section class="block">
@@ -44,7 +63,9 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Diagram coming</span>
-          <span class="sub">A scrubbed architecture diagram - no addresses or internal hostnames.</span>
+          <span class="sub">Configure stage: pipeline -&gt; automation user -&gt; ordered roles
+            (firewall -&gt; time-sync -&gt; monitoring agent) converging the host. Scrubbed of
+            addresses and hostnames.</span>
         </div>
       </section>
 
@@ -53,27 +74,66 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Screenshot coming</span>
-          <span class="sub">A screenshot with internal identifiers cropped or redacted per the publishing checklist.</span>
+          <span class="sub">A play recap showing an idempotent second run with zero changed
+            tasks. Captured per the publishing checklist - hostnames and addresses redacted.</span>
         </div>
       </section>
 
       <section class="block">
         <h2>Lessons learned &amp; gotchas</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="callout">
+          <span class="tag">Gotcha - firewall ordering can lock you out</span>
+          The firewall role has to ensure the <b>SSH allow rule is in place before</b> the
+          default zone flips to DROP. Get that backwards and the play sets a default-deny policy
+          while it still needs SSH to finish - and it severs its own connection mid-run, leaving
+          a half-configured, unreachable host. The fix is baked into the role order: firewall
+          first, and within it, permit management access before tightening the default. Never let
+          "deny by default" land before "allow the thing you are connected over."
+        </div>
+        <ul>
+          <li><b>Idempotence is a feature you have to test.</b> A role is only trustworthy once a
+            second run reports zero changes. A task that keeps reporting "changed" is usually
+            lying about convergence and will fight you later.</li>
+          <li><b>Pin the collection path.</b> If roles depend on collections, the path they load
+            from must be fixed and owned by the run user - not left to whatever happens to be
+            installed on a given agent - or the same play behaves differently on different
+            runners.</li>
+          <li><b>Run as a real service account, not root.</b> Least privilege applies to
+            configuration management too; a role that needs elevation should ask for it
+            explicitly, so "what can this play change?" stays answerable.</li>
+        </ul>
       </section>
 
       <section class="block">
         <h2>Impact</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="stats">
+          <div class="stat">
+            <div class="num">1 play</div>
+            <div class="label">bare VM to ready host</div>
+          </div>
+          <div class="stat">
+            <div class="num">0</div>
+            <div class="label">changed tasks on re-run</div>
+          </div>
+          <div class="stat">
+            <div class="num">Order</div>
+            <div class="label">enforced, not hoped</div>
+          </div>
+        </div>
+        <p>Ansible is what makes "provisioned" mean "actually configured and hardened," every
+          time, the same way. The firewall-ordering lesson is the one I keep closest: automation
+          that can lock itself out of the very host it is configuring is a trap, and the defense
+          is encoding the safe order into the roles so it cannot be got wrong by accident.</p>
       </section>
 
       <section class="block">
         <h2>Code &amp; further reading</h2>
         <div class="links">
-          <a href="#" aria-disabled="true">Repo (link coming)</a>
+          <a href="#" aria-disabled="true">Roles (link coming)</a>
+          <a href="https://docs.ansible.com/ansible/latest/playbook_guide/index.html" rel="noopener">Ansible playbooks</a>
         </div>
-        <p class="note">Repository links point to scrubbed, public-safe versions of the lab's
-          code. Internal addresses, hostnames, and secrets are never published.</p>
+        <p class="note">Published roles are scrubbed of internal addresses, hostnames, inventory,
+          and any secret references before they go public.</p>
       </section>
     </div>
 

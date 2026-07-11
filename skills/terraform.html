@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Terraform - Skills - Bill Gernert</title>
-  <meta name="description" content="Terraform in AutomationLab - writeup coming. Per-VM workspaces that provision infrastructure from declared state.">
+  <meta name="description" content="How I use Terraform to provision the lab - per-VM workspaces to keep blast radius small, roll-forward on partial failure, and pinned, verified tool versions.">
   <meta name="color-scheme" content="dark">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230a0e1a'/><polygon points='50,14 81,32 81,68 50,86 19,68 19,32' fill='none' stroke='%2300d4ff' stroke-width='5'/><circle cx='50' cy='50' r='9' fill='%2300ff96'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,18 +25,37 @@
     <header class="skill-head">
       <span class="badge" data-accent="cyan">Platform &amp; Orchestration</span>
       <h1>Terraform</h1>
-      <p class="descriptor">Per-VM workspaces that provision infrastructure from declared state.</p>
+      <p class="descriptor">Infrastructure from declared state - one workspace per VM so a mistake blasts one machine, not the fleet, and a pipeline that rolls forward cleanly when a step fails.</p>
     </header>
 
     <div class="skill-body">
       <section class="block">
         <h2>What it is &amp; why I use it</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <p>Terraform is how VMs come into existence in AutomationLab. The hypervisor is driven
+          entirely through the <code>bpg/proxmox</code> provider - there is no hand-built guest
+          anywhere in the lab. Terraform owns the "make the machine exist and match what the code
+          says" half of provisioning; configuration management takes it from there.</p>
+        <p>I use it because infrastructure should be <b>declarative and diffable</b>. A plan shows
+          exactly what will change before anything does, and drift surfaces as a diff instead of a
+          surprise - which is the whole reason to treat infrastructure as code rather than as a
+          sequence of console clicks.</p>
       </section>
 
       <section class="block">
         <h2>How I use it in the lab</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <ul>
+          <li><b>One workspace per VM.</b> Each machine has its own workspace and state rather
+            than one giant shared state for the whole lab. A bad apply can only touch the one VM
+            it owns.</li>
+          <li><b>Driven by the pipeline.</b> Terraform runs as the provision stage of the Jenkins
+            flow, after IP allocation and before configuration - plan, gated apply, then hand off.</li>
+          <li><b>Roll-forward on partial failure.</b> If a later stage fails, the pipeline cleans
+            up forward to a consistent state rather than leaving a half-built VM lying around, and
+            a decommission path reverses what was created.</li>
+          <li><b>Pinned provider and tool versions.</b> The provider and the Terraform binary are
+            pinned to explicit versions so a run is reproducible and does not silently change
+            behavior when an upstream release lands.</li>
+        </ul>
       </section>
 
       <section class="block">
@@ -44,7 +63,8 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Diagram coming</span>
-          <span class="sub">A scrubbed architecture diagram - no addresses or internal hostnames.</span>
+          <span class="sub">Per-VM workspace model: allocate -&gt; plan -&gt; gated apply -&gt;
+            hand off, each VM isolated in its own state. Scrubbed of addresses and hostnames.</span>
         </div>
       </section>
 
@@ -53,27 +73,66 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Screenshot coming</span>
-          <span class="sub">A screenshot with internal identifiers cropped or redacted per the publishing checklist.</span>
+          <span class="sub">A plan output for a single VM workspace ahead of a gated apply.
+            Captured per the publishing checklist - addresses, hostnames, and IDs redacted.</span>
         </div>
       </section>
 
       <section class="block">
         <h2>Lessons learned &amp; gotchas</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="callout">
+          <span class="tag">Gotcha - a version in the listing is not a downloadable artifact</span>
+          When pinning a tool version, "the version appears in the releases directory" is not the
+          same as "the release exists." A version can be listed while the specific artifact you
+          need returns a 404. So I verify the actual <b>artifact URL returns 200</b> before pinning
+          to it - not just that the version number shows up in a directory listing. Skip that and a
+          pipeline that passed yesterday breaks on a fresh agent that has to download the pinned
+          binary for the first time.
+        </div>
+        <ul>
+          <li><b>Per-VM state is worth the extra files.</b> One monolithic state for everything is
+            tidy until a single bad apply or a lock left behind takes the whole lab's provisioning
+            hostage. Small, isolated states keep the blast radius to one machine.</li>
+          <li><b>The plan is the review, so gate the apply.</b> Applying straight from a push
+            defeats the point of a plan. A human-gated apply in the pipeline means the diff is
+            actually looked at before infrastructure moves.</li>
+          <li><b>Roll-forward beats leaving wreckage.</b> A failed provision that cleans up to a
+            known state is recoverable; a half-built VM with orphaned state is a manual mess. Write
+            the failure path, do not just hope for the happy one.</li>
+        </ul>
       </section>
 
       <section class="block">
         <h2>Impact</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="stats">
+          <div class="stat">
+            <div class="num">1 VM</div>
+            <div class="label">per workspace / state</div>
+          </div>
+          <div class="stat">
+            <div class="num">100%</div>
+            <div class="label">guests from code</div>
+          </div>
+          <div class="stat">
+            <div class="num">200</div>
+            <div class="label">verified before pinning</div>
+          </div>
+        </div>
+        <p>Terraform is what makes the lab reproducible from the metal up: every VM is described in
+          code, isolated in its own state, and created through a gated, roll-forward pipeline. The
+          version-pinning lesson is a small one that saves a whole class of "worked yesterday,
+          broken today" failures - proof that in IaC the boring details are exactly where
+          reliability lives.</p>
       </section>
 
       <section class="block">
         <h2>Code &amp; further reading</h2>
         <div class="links">
-          <a href="#" aria-disabled="true">Repo (link coming)</a>
+          <a href="#" aria-disabled="true">Modules (link coming)</a>
+          <a href="https://registry.terraform.io/providers/bpg/proxmox/latest/docs" rel="noopener">bpg/proxmox provider</a>
         </div>
-        <p class="note">Repository links point to scrubbed, public-safe versions of the lab's
-          code. Internal addresses, hostnames, and secrets are never published.</p>
+        <p class="note">Published modules are scrubbed of internal addresses, hostnames, IDs, and
+          any credential references before they go public.</p>
       </section>
     </div>
 

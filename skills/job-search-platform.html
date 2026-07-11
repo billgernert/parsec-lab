@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Job-search platform - Skills - Bill Gernert</title>
-  <meta name="description" content="Job-search platform in AutomationLab - writeup coming. A self-hosted application built and operated on the same platform.">
+  <meta name="description" content="A self-hosted job-search application I built and operate on AutomationLab - a real app with a real data pipeline, and the migration discipline that keeps its schema honest.">
   <meta name="color-scheme" content="dark">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230a0e1a'/><polygon points='50,14 81,32 81,68 50,86 19,68 19,32' fill='none' stroke='%2300d4ff' stroke-width='5'/><circle cx='50' cy='50' r='9' fill='%2300ff96'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,18 +25,36 @@
     <header class="skill-head">
       <span class="badge" data-accent="green">Automation &amp; Tooling</span>
       <h1>Job-search platform</h1>
-      <p class="descriptor">A self-hosted application built and operated on the same platform.</p>
+      <p class="descriptor">A self-hosted application I built and operate on the same platform that runs everything else - a real app with a real data pipeline, held to the same review and migration discipline as the infrastructure.</p>
     </header>
 
     <div class="skill-body">
       <section class="block">
         <h2>What it is &amp; why I use it</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <p>The job-search platform is a self-hosted application I built to run on top of
+          AutomationLab. It matters here because it is the proof that the lab is a <b>platform</b>,
+          not just infrastructure for its own sake: a real app, with a database and a scheduled
+          data pipeline, deployed and operated with the same GitOps and pipeline discipline as
+          every other workload.</p>
+        <p>Building it end to end - schema, data collection, deployment - is also where a lot of
+          the platform's rougher edges showed up first, because an application with persistent
+          state exercises parts of the system that stateless services never touch.</p>
       </section>
 
       <section class="block">
         <h2>How I use it in the lab</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <ul>
+          <li><b>Deployed like everything else.</b> The app ships through the same
+            build-and-deploy path as the rest of the cluster - reviewed changes, versioned
+            images, reconciled state - not a hand-deployed pet.</li>
+          <li><b>A scheduled data pipeline.</b> Staged jobs collect and enrich data on a schedule,
+            so the app's content stays current without manual intervention.</li>
+          <li><b>Database-backed with real migrations.</b> Schema changes are version-controlled
+            migrations that apply as an explicit pipeline stage - which turned out to be the
+            single most important operational detail (see the gotcha).</li>
+          <li><b>Secrets from the manager, config from git.</b> Connection details come from the
+            secrets manager at run time; everything non-secret is declared in the repo.</li>
+        </ul>
       </section>
 
       <section class="block">
@@ -44,7 +62,9 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Diagram coming</span>
-          <span class="sub">A scrubbed architecture diagram - no addresses or internal hostnames.</span>
+          <span class="sub">App + database + scheduled collect/enrich pipeline, with the migrate
+            step gating schema changes. Scrubbed of hostnames, connection strings, and
+            addresses.</span>
         </div>
       </section>
 
@@ -53,27 +73,68 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Screenshot coming</span>
-          <span class="sub">A screenshot with internal identifiers cropped or redacted per the publishing checklist.</span>
+          <span class="sub">The pipeline run showing the migrate stage applying a schema change
+            before the app picks it up. Captured per the publishing checklist - hostnames,
+            connection details, and any data redacted.</span>
         </div>
       </section>
 
       <section class="block">
         <h2>Lessons learned &amp; gotchas</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="callout">
+          <span class="tag">Gotcha - a merged migration is not an applied migration</span>
+          The one that cost me real confusion: merging a PR that adds a database migration does
+          <b>not</b> change the schema. The migration only takes effect when the pipeline's
+          <b>migrate stage actually runs</b> - here, as part of the scheduled data pipeline. So
+          right after a merge, the code expects a column the live database does not have yet, and
+          you get errors that look like a bug in the app when the real cause is "the schema change
+          has not been applied." The rule I now follow: never assume a merged migration is live -
+          run the migrate stage (or verify against the database) before trusting it.
+        </div>
+        <ul>
+          <li><b>Deploy order matters for stateful apps.</b> Code that depends on a new column has
+            to land <i>after</i> the migration that adds it, not merely after the migration is
+            merged. "Merged" and "applied" are different points in time, and the gap is where
+            outages live.</li>
+          <li><b>Verify schema against the database, not the repo.</b> The repo tells you what the
+            schema should be; only the database tells you what it is. When something looks broken
+            after a change, check the actual schema first.</li>
+          <li><b>An app with state is the honest test of a platform.</b> Stateless services hide a
+            lot of sins. A real database, real migrations, and a real schedule are what proved the
+            platform could carry production-shaped workloads, not just demos.</li>
+        </ul>
       </section>
 
       <section class="block">
         <h2>Impact</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="stats">
+          <div class="stat">
+            <div class="num">1 app</div>
+            <div class="label">built and operated end to end</div>
+          </div>
+          <div class="stat">
+            <div class="num">Scheduled</div>
+            <div class="label">collect + enrich pipeline</div>
+          </div>
+          <div class="stat">
+            <div class="num">Gated</div>
+            <div class="label">schema migrations</div>
+          </div>
+        </div>
+        <p>The job-search platform is the workload that turns AutomationLab from "infrastructure I
+          automated" into "a platform that runs a real application." The migration lesson is the
+          one I carry everywhere now: shipping the code is not the same as changing the world it
+          runs in, and the discipline is verifying the change actually landed - not assuming a
+          merge made it so.</p>
       </section>
 
       <section class="block">
         <h2>Code &amp; further reading</h2>
         <div class="links">
-          <a href="#" aria-disabled="true">Repo (link coming)</a>
+          <a href="#" aria-disabled="true">App repo (link coming)</a>
         </div>
-        <p class="note">Repository links point to scrubbed, public-safe versions of the lab's
-          code. Internal addresses, hostnames, and secrets are never published.</p>
+        <p class="note">The application and its pipeline are scrubbed of hostnames, connection
+          strings, credentials, and any personal data before anything is published.</p>
       </section>
     </div>
 

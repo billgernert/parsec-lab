@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>HashiCorp Vault - Skills - Bill Gernert</title>
-  <meta name="description" content="HashiCorp Vault in AutomationLab - writeup coming. AppRole-brokered secrets for every pipeline and service in the lab.">
+  <meta name="description" content="How I use HashiCorp Vault as the secrets backbone of AutomationLab - AppRole auth, least-privilege scoping, and Vault-backed credential helpers.">
   <meta name="color-scheme" content="dark">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230a0e1a'/><polygon points='50,14 81,32 81,68 50,86 19,68 19,32' fill='none' stroke='%2300d4ff' stroke-width='5'/><circle cx='50' cy='50' r='9' fill='%2300ff96'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,26 +25,60 @@
     <header class="skill-head">
       <span class="badge" data-accent="cyan">Security &amp; Identity</span>
       <h1>HashiCorp Vault</h1>
-      <p class="descriptor">AppRole-brokered secrets for every pipeline and service in the lab.</p>
+      <p class="descriptor">The secrets backbone of the lab - every pipeline and service authenticates with a scoped AppRole and reads only the paths it needs, nothing more.</p>
     </header>
 
     <div class="skill-body">
       <section class="block">
         <h2>What it is &amp; why I use it</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <p>Vault is the single source of truth for secrets in AutomationLab: API tokens,
+          per-host monitoring keys, service credentials, and the personal access tokens that
+          automation uses to open pull requests. Nothing sensitive lives in a repo, a pipeline
+          definition, or a container image - it lives in Vault and is fetched at the moment it is
+          needed.</p>
+        <p>The reason it matters is not "encryption at rest" - it is <b>identity and scope</b>.
+          Every consumer proves who it is, gets a short-lived token, and is authorized to read a
+          deliberately narrow slice of the secret tree. A leaked credential is then a bounded
+          problem, not a master key.</p>
       </section>
 
       <section class="block">
         <h2>How I use it in the lab</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <ul>
+          <li><b>AppRole for machines.</b> Pipelines and services authenticate with the AppRole
+            method - a role ID plus a secret ID - rather than a human logging in. The credentials
+            are injected as environment or mounted secrets, never baked into an image.</li>
+          <li><b>KV v2 for secret storage.</b> Secrets live in a versioned key-value store under
+            a consistent <code>&lt;service&gt;/...</code> path convention, so every secret has an
+            obvious, predictable home and a version history to roll back to.</li>
+          <li><b>Least-privilege policies.</b> Each role is bound to a policy that grants read on
+            exactly the paths that role needs. A monitoring agent cannot read PR tokens; the PR
+            helper cannot read monitoring keys.</li>
+          <li><b>Vault-backed credential helpers.</b> Small scripts fetch a secret at runtime and
+            hand it straight to the tool that needs it - the secret is never written to disk and
+            never printed. The PR-opening helper is the clearest example (below).</li>
+        </ul>
       </section>
 
       <section class="block">
         <h2>Architecture</h2>
+        <p>A concrete, scrubbed example: the <b>portable PR-token AppRole</b> that lets the
+          automation open pull requests from any box without a token file on disk.</p>
+        <ul>
+          <li>A dedicated read-only <b>policy</b> grants <code>read</code> on a <b>single</b>
+            KV path - the one holding the PR token - and nothing else.</li>
+          <li>A dedicated <b>AppRole</b> is bound to that one policy. Its role ID and secret ID
+            are themselves stored as a cluster secret, so a pipeline can bootstrap an AppRole
+            login over Vault's HTTP API using only its in-cluster identity.</li>
+          <li>The helper logs in, reads the one path, hands the token to the PR tool in memory,
+            and exits. <b>No secret is written to disk</b> at any step.</li>
+        </ul>
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Diagram coming</span>
-          <span class="sub">A scrubbed architecture diagram - no addresses or internal hostnames.</span>
+          <span class="sub">The AppRole login path: cluster identity -&gt; bootstrap login -&gt;
+            scoped policy -&gt; one KV read -&gt; token used in memory. Scrubbed of addresses and
+            real secret paths.</span>
         </div>
       </section>
 
@@ -53,27 +87,74 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Screenshot coming</span>
-          <span class="sub">A screenshot with internal identifiers cropped or redacted per the publishing checklist.</span>
+          <span class="sub">The credential helper logging in via AppRole and reporting a
+            successful read, with no secret material shown. Captured per the publishing
+            checklist - no tokens, paths, or addresses.</span>
         </div>
       </section>
 
       <section class="block">
         <h2>Lessons learned &amp; gotchas</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="callout">
+          <span class="tag">Gotcha - KV v2 hides a "data" segment</span>
+          On a KV <b>v2</b> mount, the CLI path and the API path are not the same. You read
+          <code>kv get &lt;mount&gt;/foo</code> on the command line, but the HTTP API path is
+          <code>&lt;mount&gt;/data/foo</code> - and the JSON response wraps the secret one level
+          deep under <code>.data.data</code>. Every hand-rolled API client I wrote hit this: a
+          403 or an empty result that looks like a policy problem is often just the missing
+          <code>data/</code> segment. Worse, a policy written for <code>&lt;mount&gt;/foo</code>
+          will not authorize the API call to <code>&lt;mount&gt;/data/foo</code>.
+        </div>
+        <ul>
+          <li><b>Scope the policy to one path, then prove it.</b> It is tempting to grant a role a
+            broad wildcard "so it just works." The discipline that pays off is granting exactly
+            one path and then testing that the role <b>can</b> read it and <b>cannot</b> read a
+            neighbour. Least privilege you have not tested is just a hope.</li>
+          <li><b>Policy paths must match the auth method's real request path.</b> Because KV v2
+            inserts <code>data/</code>, the metadata and data planes are separate capabilities.
+            Granting read on the data path does not let you list versions, and vice versa - decide
+            which the consumer actually needs.</li>
+          <li><b>Keep secrets out of argv.</b> A token passed on a command line leaks into process
+            listings and shell history. Helpers fetch and pipe in memory; the token never becomes
+            a visible argument or a file.</li>
+          <li><b>Separate role per consumer.</b> One shared "automation" role that can read
+            everything defeats the point. A role per job means revocation and rotation are
+            surgical, and an incident stays contained to one blast radius.</li>
+        </ul>
       </section>
 
       <section class="block">
         <h2>Impact</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="stats">
+          <div class="stat">
+            <div class="num">0</div>
+            <div class="label">secrets in git or images</div>
+          </div>
+          <div class="stat">
+            <div class="num">1 path</div>
+            <div class="label">the PR role can read</div>
+          </div>
+          <div class="stat">
+            <div class="num">0</div>
+            <div class="label">tokens written to disk</div>
+          </div>
+        </div>
+        <p>Vault is what lets the rest of the platform be config-as-code without being
+          secret-as-code. Pipelines run from public-safe definitions, yet still reach real
+          credentials at runtime - each one scoped so tightly that "what could this leak reach?"
+          has a short, boring answer. That is the whole goal of a secrets manager, and wiring it
+          up per-consumer is where the real work lives.</p>
       </section>
 
       <section class="block">
         <h2>Code &amp; further reading</h2>
         <div class="links">
-          <a href="#" aria-disabled="true">Repo (link coming)</a>
+          <a href="#" aria-disabled="true">Credential helper (link coming)</a>
+          <a href="https://developer.hashicorp.com/vault/docs/auth/approle" rel="noopener">Vault AppRole</a>
+          <a href="https://developer.hashicorp.com/vault/docs/secrets/kv/kv-v2" rel="noopener">KV v2</a>
         </div>
-        <p class="note">Repository links point to scrubbed, public-safe versions of the lab's
-          code. Internal addresses, hostnames, and secrets are never published.</p>
+        <p class="note">Published helper code is scrubbed of real secret paths, role IDs, and
+          addresses. The policies and paths shown here are illustrative, not the live values.</p>
       </section>
     </div>
 

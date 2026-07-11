@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Active Directory - Skills - Bill Gernert</title>
-  <meta name="description" content="Active Directory in AutomationLab - writeup coming. On-prem identity and the fully automated user lifecycle.">
+  <meta name="description" content="How I run on-prem Active Directory in AutomationLab - a fully automated user lifecycle with disable-first offboarding and a delayed cleanup sweep, synced to the cloud directory.">
   <meta name="color-scheme" content="dark">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230a0e1a'/><polygon points='50,14 81,32 81,68 50,86 19,68 19,32' fill='none' stroke='%2300d4ff' stroke-width='5'/><circle cx='50' cy='50' r='9' fill='%2300ff96'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,26 +25,58 @@
     <header class="skill-head">
       <span class="badge" data-accent="cyan">Security &amp; Identity</span>
       <h1>Active Directory</h1>
-      <p class="descriptor">On-prem identity and the fully automated user lifecycle.</p>
+      <p class="descriptor">On-prem identity and the full user lifecycle as automation - provision, sync, and a careful offboarding that disables first and deletes later, never the other way round.</p>
     </header>
 
     <div class="skill-body">
       <section class="block">
         <h2>What it is &amp; why I use it</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <p>Active Directory is the identity source of truth for AutomationLab. It holds the users,
+          groups, and service accounts the rest of the platform authorizes against, and it is the
+          <b>authoritative</b> half of a hybrid setup: on-prem AD is where identities are born and
+          changed, and those changes flow up to the cloud directory - not the reverse.</p>
+        <p>I run the whole <b>user lifecycle as code</b>: joining, group membership, and leaving
+          are pipeline actions with approval gates, not a checklist someone follows by hand in a
+          management console. Identity is too important - and too easy to get subtly wrong - to be
+          a manual process.</p>
       </section>
 
       <section class="block">
         <h2>How I use it in the lab</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <ul>
+          <li><b>Structured, automation-owned objects.</b> Automation-managed users, groups, and
+            service accounts live in a dedicated organizational-unit tree, so what the automation
+            owns is clearly separated from everything else.</li>
+          <li><b>Provisioning by pipeline.</b> Creating a user creates the account, sets group
+            membership, and lets the change sync to the cloud directory - one flow, repeatable,
+            with the sensitive values pulled from the secrets manager at run time.</li>
+          <li><b>Hybrid sync to the cloud.</b> An identity-sync bridge keeps on-prem AD and the
+            cloud directory aligned, with on-prem as the source of authority.</li>
+          <li><b>Disable-first offboarding.</b> Leaving is the highest-stakes action, so it is the
+            most guarded: it requires four-eyes approval, disables the account immediately, and
+            defers destructive cleanup to a later sweep.</li>
+        </ul>
       </section>
 
       <section class="block">
         <h2>Architecture</h2>
+        <p>The lifecycle that matters most is <b>offboarding</b>, because it is the one that is
+          destructive and hard to undo:</p>
+        <ul>
+          <li><b>Four-eyes approval.</b> A deprovision is requested by one person and approved by
+            a different, explicitly authorized one - the request and approval identities cannot be
+            the same.</li>
+          <li><b>Disable immediately.</b> Access is cut at once by disabling the account, which is
+            instantly reversible if the request was wrong.</li>
+          <li><b>Delete on a delay.</b> A later cleanup sweep performs the irreversible removal,
+            leaving a recovery window between "access revoked" and "gone for good."</li>
+        </ul>
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Diagram coming</span>
-          <span class="sub">A scrubbed architecture diagram - no addresses or internal hostnames.</span>
+          <span class="sub">Lifecycle flow: provision -&gt; sync -&gt; (offboard) four-eyes -&gt;
+            disable now -&gt; delayed cleanup sweep. Scrubbed of domain names, OU paths, and
+            addresses.</span>
         </div>
       </section>
 
@@ -53,27 +85,70 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Screenshot coming</span>
-          <span class="sub">A screenshot with internal identifiers cropped or redacted per the publishing checklist.</span>
+          <span class="sub">An offboarding run showing the account disabled and the cleanup
+            scheduled, with the approver recorded. Captured per the publishing checklist -
+            usernames, domain, and addresses redacted.</span>
         </div>
       </section>
 
       <section class="block">
         <h2>Lessons learned &amp; gotchas</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="callout">
+          <span class="tag">Gotcha - in hybrid identity, the source of authority wins silently</span>
+          When on-prem AD is the authority and the cloud directory is a synced replica, editing an
+          attribute <b>in the cloud</b> is a trap: the next sync cycle overwrites it with the
+          on-prem value and your change vanishes with no error. The mental model has to be "change
+          it where it is authoritative, then let it flow" - not "change it wherever the UI is
+          convenient." Half the confusing identity issues I chased came down to editing on the
+          wrong side of the sync.
+        </div>
+        <ul>
+          <li><b>Disable before you delete - always.</b> Immediate deletion on offboarding has no
+            undo; a fat-fingered or malicious request is permanent. Disable-now / delete-later
+            turns a mistake into a recoverable event and still cuts access instantly.</li>
+          <li><b>Four-eyes belongs on the destructive action, in code.</b> The rule that the
+            requester cannot be the approver is only real when a pipeline enforces it - a policy in
+            a document is not a control.</li>
+          <li><b>Separate what automation owns.</b> Keeping automation-managed objects in their own
+            OU tree means a bulk action can never accidentally reach into identities it was never
+            meant to touch.</li>
+          <li><b>Service accounts are identities too.</b> They need the same lifecycle discipline
+            as users - scoped, tracked, and revocable - or they become the forgotten keys nobody
+            rotates.</li>
+        </ul>
       </section>
 
       <section class="block">
         <h2>Impact</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="stats">
+          <div class="stat">
+            <div class="num">2 people</div>
+            <div class="label">to offboard an identity</div>
+          </div>
+          <div class="stat">
+            <div class="num">Instant</div>
+            <div class="label">access revocation</div>
+          </div>
+          <div class="stat">
+            <div class="num">Delayed</div>
+            <div class="label">irreversible cleanup</div>
+          </div>
+        </div>
+        <p>Active Directory is where the lab's identity discipline lives. Automating the lifecycle
+          makes joins and leaves repeatable and reviewable; disable-first offboarding makes the
+          riskiest action safe to get wrong; and treating on-prem as the single source of authority
+          keeps hybrid identity from quietly drifting out of sync. Identity done carefully is what
+          everything else gets to trust.</p>
       </section>
 
       <section class="block">
         <h2>Code &amp; further reading</h2>
         <div class="links">
-          <a href="#" aria-disabled="true">Repo (link coming)</a>
+          <a href="#" aria-disabled="true">Lifecycle automation (link coming)</a>
+          <a href="https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/active-directory-domain-services" rel="noopener">AD DS overview</a>
         </div>
-        <p class="note">Repository links point to scrubbed, public-safe versions of the lab's
-          code. Internal addresses, hostnames, and secrets are never published.</p>
+        <p class="note">Published lifecycle code is scrubbed of domain names, OU paths, usernames,
+          addresses, and any secret references before it goes public.</p>
       </section>
     </div>
 
