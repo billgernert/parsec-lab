@@ -1,5 +1,6 @@
 # Cloudflare Pages response headers (https://developers.cloudflare.com/pages/configuration/headers/).
-# The page is near-self-contained: inline CSS, inline SVG logo, data: favicon, no scripts.
+# The landing page is near-self-contained: inline CSS, inline SVG logo, data: favicon, no scripts.
+# The skills section links a shared stylesheet (skills/style.css), so style-src includes 'self'.
 # The only external requests are the parsec-lab brand fonts (Share Tech Mono + Exo 2) from
 # Google Fonts, so the CSP allows exactly those two hosts and nothing else.
 /*
@@ -7,4 +8,4 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: geolocation=(), microphone=(), camera=()
-  Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
