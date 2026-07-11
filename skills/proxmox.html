@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Proxmox VE - Skills - Bill Gernert</title>
+  <meta name="description" content="How I run a five-node Proxmox VE high-availability cluster as the compute foundation of AutomationLab.">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230a0e1a'/><polygon points='50,14 81,32 81,68 50,86 19,68 19,32' fill='none' stroke='%2300d4ff' stroke-width='5'/><circle cx='50' cy='50' r='9' fill='%2300ff96'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page-narrow">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <a href="/">parsec-lab.com</a>
+      <span class="sep">/</span>
+      <a href="index.html">Skills</a>
+      <span class="sep">/</span>
+      <span class="here">Proxmox VE</span>
+    </nav>
+
+    <header class="skill-head">
+      <span class="badge" data-accent="cyan">Platform &amp; Orchestration</span>
+      <h1>Proxmox VE</h1>
+      <p class="descriptor">The five-node high-availability cluster that every VM in the lab is provisioned onto - the metal underneath the whole platform.</p>
+    </header>
+
+    <div class="skill-body">
+      <section class="block">
+        <h2>What it is &amp; why I use it</h2>
+        <p>Proxmox VE is an open-source virtualization platform that combines KVM virtual
+          machines and LXC containers with clustering, high availability, and software-defined
+          storage under one API. I chose it as the base layer for AutomationLab because it gives
+          me a real, API-driven hypervisor cluster - the same primitives a production platform
+          team works with - without a per-socket licensing model getting in the way of
+          experimentation.</p>
+        <p>The point of the lab is to treat infrastructure as something you <b>declare and
+          automate</b>, not something you click together. Proxmox exposes everything through a
+          REST API, which is exactly what lets Terraform stand VMs up from code instead of from
+          a wizard.</p>
+      </section>
+
+      <section class="block">
+        <h2>How I use it in the lab</h2>
+        <ul>
+          <li><b>Five nodes, clustered.</b> The cluster runs as a single management plane with a
+            shared quorum, so I administer all nodes as one system rather than five separate
+            hosts.</li>
+          <li><b>High availability.</b> Selected VMs are enrolled in HA groups; if a node fails,
+            the cluster restarts those guests elsewhere automatically. Enrollment is the final,
+            deliberate step of provisioning - not the default - so I control exactly what is
+            allowed to migrate.</li>
+          <li><b>Terraform-driven.</b> Each VM gets its own Terraform workspace using the
+            <code>bpg/proxmox</code> provider. A pipeline plans and applies against the cluster
+            API; there is no hand-built VM anywhere in the lab.</li>
+          <li><b>Dynamic load balancing.</b> The cluster rebalances running guests across nodes
+            based on load, so no single node becomes a hotspot as the lab grows.</li>
+          <li><b>Clean decommission.</b> The provisioning flow reverses cleanly - HA
+            de-registration, then destroy - so tearing a VM down is as automated as building it.</li>
+        </ul>
+      </section>
+
+      <section class="block">
+        <h2>Architecture</h2>
+        <div class="frame">
+          <div class="glyph" aria-hidden="true"></div>
+          <span class="cap">Diagram coming</span>
+          <span class="sub">Cluster topology: five HA nodes, the shared quorum and storage
+            layer, and where the Terraform provider plugs into the cluster API. Rendered as a
+            scrubbed diagram - no addresses or node hostnames.</span>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>In action</h2>
+        <div class="frame">
+          <div class="glyph" aria-hidden="true"></div>
+          <span class="cap">Screenshot coming</span>
+          <span class="sub">Cluster summary view with all nodes healthy and an HA-managed guest
+            mid-migration. Captured with hostnames and addresses cropped or redacted per the
+            publishing checklist.</span>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>Lessons learned &amp; gotchas</h2>
+        <div class="callout">
+          <span class="tag">Gotcha</span>
+          Quorum is not optional. In a small cluster it is tempting to run an even node count,
+          but you want a reliable majority for the quorum to survive a single-node loss without
+          the whole cluster going read-only. Plan the vote layout before you need it, not during
+          an outage.
+        </div>
+        <ul>
+          <li><b>HA is a promise you have to mean.</b> Enrolling a guest in HA means the cluster
+            will happily restart it on another node - including after a transient blip. Anything
+            with node-local state has to be designed for that before you enroll it, or you will
+            be surprised at the worst time.</li>
+          <li><b>The API is the contract.</b> Once every VM comes from Terraform against the API,
+            drift shows up as a plan diff instead of a mystery. Clicking a change in the UI just
+            means the next apply wants to undo it - so I stopped doing that.</li>
+        </ul>
+      </section>
+
+      <section class="block">
+        <h2>Impact</h2>
+        <div class="stats">
+          <div class="stat">
+            <div class="num">5</div>
+            <div class="label">HA nodes, one plane</div>
+          </div>
+          <div class="stat">
+            <div class="num">100%</div>
+            <div class="label">VMs from code</div>
+          </div>
+          <div class="stat">
+            <div class="num">0</div>
+            <div class="label">hand-built guests</div>
+          </div>
+        </div>
+        <p>Proxmox turned "the lab" from a pile of machines into a single programmable substrate.
+          Everything above it - GitOps, monitoring, identity - assumes it can ask for a VM and
+          get one, reliably, from code. That assumption is what makes the rest of the platform
+          possible.</p>
+      </section>
+
+      <section class="block">
+        <h2>Code &amp; further reading</h2>
+        <div class="links">
+          <a href="#" aria-disabled="true">Repo (link coming)</a>
+          <a href="https://www.proxmox.com/en/proxmox-virtual-environment/overview" rel="noopener">Proxmox VE</a>
+        </div>
+        <p class="note">Repository links point to scrubbed, public-safe versions of the lab's
+          Terraform and pipeline code. Internal addresses, hostnames, and secrets are never
+          published.</p>
+      </section>
+    </div>
+
+    <footer>
+      <a href="index.html">&#8592; All skills</a> &#183; built and operated by Bill Gernert
+    </footer>
+  </main>
+</body>
+</html>

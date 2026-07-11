@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Grafana - Skills - Bill Gernert</title>
+  <meta name="description" content="How I use Grafana - including a custom Infinity data source - to build dashboards over AutomationLab.">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230a0e1a'/><polygon points='50,14 81,32 81,68 50,86 19,68 19,32' fill='none' stroke='%2300d4ff' stroke-width='5'/><circle cx='50' cy='50' r='9' fill='%2300ff96'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page-narrow">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <a href="/">parsec-lab.com</a>
+      <span class="sep">/</span>
+      <a href="index.html">Skills</a>
+      <span class="sep">/</span>
+      <span class="here">Grafana</span>
+    </nav>
+
+    <header class="skill-head">
+      <span class="badge" data-accent="green">Observability</span>
+      <h1>Grafana</h1>
+      <p class="descriptor">The single pane over the lab - dashboards that pull from metrics, APIs, and JSON endpoints, including a hand-tuned Infinity data source.</p>
+    </header>
+
+    <div class="skill-body">
+      <section class="block">
+        <h2>What it is &amp; why I use it</h2>
+        <p>Grafana is the visualization and dashboarding layer for AutomationLab. It sits on top
+          of the monitoring stack and turns raw signals into something an operator can actually
+          read at a glance. I use it as the <b>front door to the platform's health</b>: cluster
+          state, provisioning outcomes, self-healing activity, and service-level views all land
+          here.</p>
+        <p>What makes it interesting is that not everything I want to chart comes from a
+          time-series database. Some of it lives behind plain REST/JSON APIs, so I lean on the
+          <b>Infinity data source</b> to pull JSON directly into panels - which is exactly where
+          the sharp edges live.</p>
+      </section>
+
+      <section class="block">
+        <h2>How I use it in the lab</h2>
+        <ul>
+          <li><b>Metrics dashboards.</b> Cluster and host health from the metrics backend, with
+            alerting thresholds visualized alongside the raw series.</li>
+          <li><b>API-sourced panels.</b> The Infinity data source pulls JSON from internal
+            service APIs so operational data that never went into a TSDB is still charted.</li>
+          <li><b>Provisioning &amp; healing views.</b> Panels that summarize pipeline runs and
+            auto-heal outcomes, so the lab's automation is observable, not a black box.</li>
+          <li><b>Access-controlled.</b> Grafana is published behind the same zero-trust edge and
+            SSO as every other app in the lab - no bare port on the internet.</li>
+        </ul>
+      </section>
+
+      <section class="block">
+        <h2>Architecture</h2>
+        <div class="frame">
+          <div class="glyph" aria-hidden="true"></div>
+          <span class="cap">Diagram coming</span>
+          <span class="sub">Data-source topology: the metrics backend and the Infinity JSON
+            path into Grafana, and how dashboards are published behind SSO. Addresses and
+            hostnames scrubbed.</span>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>In action</h2>
+        <div class="frame">
+          <div class="glyph" aria-hidden="true"></div>
+          <span class="cap">Screenshot coming</span>
+          <span class="sub">A live dashboard combining a metrics panel with an Infinity
+            JSON-sourced table. Captured with any internal identifiers cropped per the
+            publishing checklist.</span>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>Lessons learned &amp; gotchas</h2>
+        <div class="callout">
+          <span class="tag">Gotcha - Infinity backend parser</span>
+          The Infinity plugin's <b>backend</b> parser is a Go implementation of JSONata, and it
+          is not the full language. It handles a path-plus-filter root selector and plain
+          top-level columns - but it does <b>not</b> support object-construction expressions,
+          computed columns, or nested column definitions. Queries that work in a JSONata
+          playground can silently return nothing here.
+        </div>
+        <ul>
+          <li><b>Prove it with live probes, not docs.</b> The fastest way I found the real
+            boundary was to fire small, deliberate probe queries at a known endpoint and watch
+            what parsed and what came back empty. The behavior, not the documentation, is the
+            spec.</li>
+          <li><b>Shape the JSON at the source when you can.</b> If the parser cannot compute a
+            column, the cheaper fix is to have the upstream API return the field already shaped,
+            rather than fighting the query language to derive it.</li>
+          <li><b>Backend vs. browser parsing differ.</b> Choosing the parser mode changes which
+            expressions are legal. Pin the mode you are testing against so you are not debugging
+            two engines at once.</li>
+        </ul>
+      </section>
+
+      <section class="block">
+        <h2>Impact</h2>
+        <div class="stats">
+          <div class="stat">
+            <div class="num">1</div>
+            <div class="label">pane over the lab</div>
+          </div>
+          <div class="stat">
+            <div class="num">2</div>
+            <div class="label">source types unified</div>
+          </div>
+          <div class="stat">
+            <div class="num">SSO</div>
+            <div class="label">on every dashboard</div>
+          </div>
+        </div>
+        <p>Grafana is where the lab stops being a set of independent services and starts being a
+          system I can watch. The Infinity work in particular meant I could bring
+          non-time-series operational data - things that only exist as API responses - into the
+          same view as metrics, without standing up a whole extra pipeline to store it first.</p>
+      </section>
+
+      <section class="block">
+        <h2>Code &amp; further reading</h2>
+        <div class="links">
+          <a href="#" aria-disabled="true">Dashboards JSON (link coming)</a>
+          <a href="https://grafana.com/grafana/plugins/yesoreyeram-infinity-datasource/" rel="noopener">Infinity data source</a>
+        </div>
+        <p class="note">Exported dashboard JSON is scrubbed of internal endpoints and
+          identifiers before it is published.</p>
+      </section>
+    </div>
+
+    <footer>
+      <a href="index.html">&#8592; All skills</a> &#183; built and operated by Bill Gernert
+    </footer>
+  </main>
+</body>
+</html>
