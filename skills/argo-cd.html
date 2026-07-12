@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Argo CD - Skills - Bill Gernert</title>
-  <meta name="description" content="Argo CD in AutomationLab - writeup coming. GitOps reconciliation that keeps the cluster matching git.">
+  <meta name="description" content="How I run Argo CD in AutomationLab - GitOps reconciliation with self-heal, so git is the only lever that moves the cluster.">
   <meta name="color-scheme" content="dark">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230a0e1a'/><polygon points='50,14 81,32 81,68 50,86 19,68 19,32' fill='none' stroke='%2300d4ff' stroke-width='5'/><circle cx='50' cy='50' r='9' fill='%2300ff96'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,18 +25,38 @@
     <header class="skill-head">
       <span class="badge" data-accent="green">CI/CD &amp; GitOps</span>
       <h1>Argo CD</h1>
-      <p class="descriptor">GitOps reconciliation that keeps the cluster matching git.</p>
+      <p class="descriptor">GitOps reconciliation that keeps the cluster matching git - continuously, and by force. Git is the desired state; anything else is drift to be corrected.</p>
     </header>
 
     <div class="skill-body">
       <section class="block">
         <h2>What it is &amp; why I use it</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <p>Argo CD is the GitOps engine for the cluster. It continuously compares what is
+          <b>declared in git</b> against what is <b>running</b>, and reconciles the two so the
+          live state converges on the committed state. The repo is not a suggestion or a record
+          after the fact - it is the control input.</p>
+        <p>I use it because it makes the cluster <b>auditable and reproducible</b>: every change is
+          a commit, every rollback is a revert, and "what is supposed to be running?" has one
+          answer that lives in version control rather than in someone's memory of what they last
+          applied by hand.</p>
       </section>
 
       <section class="block">
         <h2>How I use it in the lab</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <ul>
+          <li><b>Declared apps, reconciled continuously.</b> Cluster workloads are defined
+            declaratively in git; Argo CD watches the repo and the cluster and keeps them in
+            step.</li>
+          <li><b>Auto-sync with self-heal.</b> Approved changes roll out automatically, and
+            out-of-band drift is actively corrected back to the committed state rather than just
+            flagged.</li>
+          <li><b>Change is a pull request.</b> Because the repo is the control plane, a change to
+            the running cluster is a reviewed PR - the same guardrails as any other code lands on
+            infrastructure.</li>
+          <li><b>Visible drift and health.</b> The sync/health view makes it obvious when
+            something has diverged or a rollout is unhealthy, so problems surface instead of
+            hiding.</li>
+        </ul>
       </section>
 
       <section class="block">
@@ -44,7 +64,9 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Diagram coming</span>
-          <span class="sub">A scrubbed architecture diagram - no addresses or internal hostnames.</span>
+          <span class="sub">Reconcile loop: git desired state -&gt; Argo CD diff -&gt; sync /
+            self-heal -&gt; cluster, with drift corrected back to git. Scrubbed of cluster
+            addresses and hostnames.</span>
         </div>
       </section>
 
@@ -53,27 +75,69 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Screenshot coming</span>
-          <span class="sub">A screenshot with internal identifiers cropped or redacted per the publishing checklist.</span>
+          <span class="sub">The application view showing synced/healthy status and a drift being
+            reconciled away. Captured per the publishing checklist - hostnames and addresses
+            redacted.</span>
         </div>
       </section>
 
       <section class="block">
         <h2>Lessons learned &amp; gotchas</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="callout">
+          <span class="tag">Gotcha - self-heal will undo your emergency hotfix</span>
+          The first time you fix something live - a quick edit straight to the cluster to stop
+          the bleeding - and watch Argo CD calmly <b>revert it</b> on the next reconcile, the
+          lesson lands hard. With self-heal on, the cluster is not the source of truth; git is. A
+          hand-applied change is drift by definition, and drift is exactly what self-heal exists
+          to erase. The fix is not to fight it or disable it in a panic - it is to make the change
+          <b>in git</b>, even in an incident, so the emergency fix and the desired state are the
+          same thing. GitOps means the repo is the steering wheel; touching the cluster directly
+          is grabbing the tyre.
+        </div>
+        <ul>
+          <li><b>Decide what self-heal is allowed to prune.</b> Reconciliation that removes
+            resources not in git is powerful and unforgiving - be deliberate about scope so a
+            reconcile never deletes something you meant to keep but forgot to declare.</li>
+          <li><b>Argo syncs manifests, not everything.</b> It reconciles what is declared as
+            Kubernetes state; out-of-band concerns it does not own (for example, a database schema
+            behind an app) still need their own apply step. Do not assume a green sync means the
+            whole world is in the desired state.</li>
+          <li><b>Drift is information, not just noise.</b> A resource that keeps drifting is often
+            telling you something is changing it out of band - chase the cause instead of only
+            re-syncing the symptom.</li>
+        </ul>
       </section>
 
       <section class="block">
         <h2>Impact</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="stats">
+          <div class="stat">
+            <div class="num">Git</div>
+            <div class="label">single source of truth</div>
+          </div>
+          <div class="stat">
+            <div class="num">Auto</div>
+            <div class="label">drift correction</div>
+          </div>
+          <div class="stat">
+            <div class="num">Revert</div>
+            <div class="label">= rollback</div>
+          </div>
+        </div>
+        <p>Argo CD is what makes the cluster honest: the running state cannot quietly diverge from
+          what is committed, because divergence gets corrected on sight. The self-heal lesson is
+          the whole philosophy in one bruise - once the repo is the control plane, the discipline
+          is to always steer from there, especially under pressure, not to reach past it.</p>
       </section>
 
       <section class="block">
         <h2>Code &amp; further reading</h2>
         <div class="links">
-          <a href="#" aria-disabled="true">Repo (link coming)</a>
+          <a href="#" aria-disabled="true">App manifests (link coming)</a>
+          <a href="https://argo-cd.readthedocs.io/en/stable/" rel="noopener">Argo CD docs</a>
         </div>
-        <p class="note">Repository links point to scrubbed, public-safe versions of the lab's
-          code. Internal addresses, hostnames, and secrets are never published.</p>
+        <p class="note">Published manifests are scrubbed of cluster addresses, hostnames, and any
+          secret references before they go public.</p>
       </section>
     </div>
 
