@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Kubernetes / K3s - Skills - Bill Gernert</title>
-  <meta name="description" content="Kubernetes / K3s in AutomationLab - writeup coming. The lightweight K3s cluster that hosts the platform's own services.">
+  <meta name="description" content="How I run a lightweight K3s cluster as the service plane of AutomationLab - deliberate tradeoffs, and the client-config gotchas that make kubectl lie to you.">
   <meta name="color-scheme" content="dark">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230a0e1a'/><polygon points='50,14 81,32 81,68 50,86 19,68 19,32' fill='none' stroke='%2300d4ff' stroke-width='5'/><circle cx='50' cy='50' r='9' fill='%2300ff96'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,18 +25,38 @@
     <header class="skill-head">
       <span class="badge" data-accent="cyan">Platform &amp; Orchestration</span>
       <h1>Kubernetes / K3s</h1>
-      <p class="descriptor">The lightweight K3s cluster that hosts the platform's own services.</p>
+      <p class="descriptor">The lightweight K3s cluster that runs the platform's own services - a real Kubernetes, sized for the lab, with tradeoffs made on purpose rather than by accident.</p>
     </header>
 
     <div class="skill-body">
       <section class="block">
         <h2>What it is &amp; why I use it</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <p>K3s is a lightweight, fully conformant Kubernetes distribution. It is the <b>service
+          plane</b> of AutomationLab: the CI controller, the GitOps engine, ingress, and the
+          lab's own applications all run as workloads on it. Terraform makes VMs; Kubernetes is
+          where the things that run <i>on</i> those VMs live.</p>
+        <p>I chose K3s over full upstream Kubernetes because it gives me the same API and the same
+          mental model with a fraction of the operational weight - the right size for a lab that
+          needs to be <b>real Kubernetes</b>, not a toy, without a control plane that dwarfs the
+          workloads it runs.</p>
       </section>
 
       <section class="block">
         <h2>How I use it in the lab</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <ul>
+          <li><b>The platform's services run here.</b> The automation controller, GitOps
+            reconciler, ingress, and lab applications are all Kubernetes workloads, deployed and
+            reconciled from git.</li>
+          <li><b>Control plane plus spread workers.</b> A control-plane node runs the API and
+            scheduler; worker nodes carry the workloads and are spread across separate physical
+            hosts so a single machine failure does not take everything with it.</li>
+          <li><b>Declarative, GitOps-managed.</b> What runs on the cluster is declared in git and
+            reconciled continuously - the cluster is cattle, described in code, not a hand-tended
+            pet.</li>
+          <li><b>Secrets and ingress wired in.</b> Secrets come from the secrets manager and
+            traffic arrives through the ingress behind the zero-trust edge - the cluster is a
+            citizen of the wider platform, not an island.</li>
+        </ul>
       </section>
 
       <section class="block">
@@ -44,7 +64,9 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Diagram coming</span>
-          <span class="sub">A scrubbed architecture diagram - no addresses or internal hostnames.</span>
+          <span class="sub">Control-plane node plus workers spread across hosts, workloads
+            reconciled from git, ingress behind the edge. Scrubbed of node addresses and
+            hostnames.</span>
         </div>
       </section>
 
@@ -53,27 +75,70 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Screenshot coming</span>
-          <span class="sub">A screenshot with internal identifiers cropped or redacted per the publishing checklist.</span>
+          <span class="sub">A node/workload view with the platform services healthy across the
+            cluster. Captured per the publishing checklist - node addresses and hostnames
+            redacted.</span>
         </div>
       </section>
 
       <section class="block">
         <h2>Lessons learned &amp; gotchas</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="callout">
+          <span class="tag">Gotcha - a stale kubeconfig makes every command fail identically</span>
+          One of the most time-wasting failures is not in the cluster at all - it is in the
+          <b>client config</b>. When a kubeconfig points at a control-plane endpoint that no longer
+          exists (a rebuilt or re-addressed control node), every <code>kubectl</code> and every
+          tool that shells out to it fails with the same timeout, and it looks like the cluster is
+          down when the cluster is fine. The tell is that <i>everything</i> fails the same way at
+          once. The fix is to point the client at the live API endpoint - I keep an explicit API
+          server override handy so tooling can reach the real control plane even when a config on
+          disk is stale.
+        </div>
+        <ul>
+          <li><b>The single control plane is a deliberate SPOF.</b> Spreading workers buys
+            resilience for workloads, but one control-plane node means losing it stops scheduling
+            and API access. That is an accepted lab tradeoff - the point is that it was
+            <i>chosen</i> and documented, so nobody mistakes it for high availability it does not
+            have.</li>
+          <li><b>Distinguish "cluster down" from "I cannot reach it."</b> Client-side, DNS, and
+            edge problems all masquerade as an outage. Before declaring the cluster broken, prove
+            you can actually reach the API from a known-good client.</li>
+          <li><b>Lightweight is a feature, not a compromise.</b> Because the distribution is the
+            same API, everything learned here transfers to full Kubernetes - the smaller footprint
+            just removes weight the lab does not need.</li>
+        </ul>
       </section>
 
       <section class="block">
         <h2>Impact</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="stats">
+          <div class="stat">
+            <div class="num">1</div>
+            <div class="label">service plane for the lab</div>
+          </div>
+          <div class="stat">
+            <div class="num">Spread</div>
+            <div class="label">workers across hosts</div>
+          </div>
+          <div class="stat">
+            <div class="num">GitOps</div>
+            <div class="label">managed workloads</div>
+          </div>
+        </div>
+        <p>K3s is the substrate everything user-facing runs on. The lasting lesson is less about
+          Kubernetes and more about honesty: name your single points of failure out loud, and
+          learn to tell a real outage from a client that is simply pointed at the wrong place -
+          because those two look identical right up until you check.</p>
       </section>
 
       <section class="block">
         <h2>Code &amp; further reading</h2>
         <div class="links">
-          <a href="#" aria-disabled="true">Repo (link coming)</a>
+          <a href="#" aria-disabled="true">Cluster manifests (link coming)</a>
+          <a href="https://docs.k3s.io/" rel="noopener">K3s docs</a>
         </div>
-        <p class="note">Repository links point to scrubbed, public-safe versions of the lab's
-          code. Internal addresses, hostnames, and secrets are never published.</p>
+        <p class="note">Published manifests are scrubbed of node addresses, hostnames, and any
+          secret references before they go public.</p>
       </section>
     </div>
 

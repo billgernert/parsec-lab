@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Gitea - Skills - Bill Gernert</title>
-  <meta name="description" content="Gitea in AutomationLab - writeup coming. Self-hosted git, pull requests, and branch protection as the source of truth.">
+  <meta name="description" content="How I run self-hosted Gitea as the source of truth for AutomationLab - branch protection, PR-only merges, and the API auth gotcha that trips up automation.">
   <meta name="color-scheme" content="dark">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230a0e1a'/><polygon points='50,14 81,32 81,68 50,86 19,68 19,32' fill='none' stroke='%2300d4ff' stroke-width='5'/><circle cx='50' cy='50' r='9' fill='%2300ff96'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,18 +25,35 @@
     <header class="skill-head">
       <span class="badge" data-accent="green">CI/CD &amp; GitOps</span>
       <h1>Gitea</h1>
-      <p class="descriptor">Self-hosted git, pull requests, and branch protection as the source of truth.</p>
+      <p class="descriptor">Self-hosted git as the source of truth - every change is a branch and a pull request into a protected main, with the same gate for humans and automation alike.</p>
     </header>
 
     <div class="skill-body">
       <section class="block">
         <h2>What it is &amp; why I use it</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <p>Gitea is the self-hosted git service at the center of AutomationLab. It is where the
+          truth lives: pipeline definitions, infrastructure code, configuration, and this site all
+          sit in Gitea repositories, and nothing reaches the platform except through a merge into
+          a protected branch. If it is not in git, it is not real.</p>
+        <p>I self-host it because the source of truth for a self-contained platform should itself
+          be part of the platform - not a dependency on an outside service. Owning the git server
+          means owning the whole change-control story end to end.</p>
       </section>
 
       <section class="block">
         <h2>How I use it in the lab</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <ul>
+          <li><b>Branch per change, PR to merge.</b> Every change is a feature branch and a pull
+            request into <code>main</code>; direct pushes to the protected branch are not the
+            path.</li>
+          <li><b>Branch protection with required checks.</b> Merges are gated on the security and
+            lint checks passing, so main stays green and reviewed by construction.</li>
+          <li><b>Automation opens PRs too.</b> The tooling that assists development opens pull
+            requests through the API, held to the same protections as a human contributor.</li>
+          <li><b>The hub the rest of the flow trusts.</b> The GitOps reconciler and CI both take
+            Gitea as their input, so the git server is the single upstream everything else
+            follows.</li>
+        </ul>
       </section>
 
       <section class="block">
@@ -44,7 +61,8 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Diagram coming</span>
-          <span class="sub">A scrubbed architecture diagram - no addresses or internal hostnames.</span>
+          <span class="sub">Branch -&gt; PR -&gt; required checks -&gt; protected main -&gt;
+            consumed by CI and GitOps. Scrubbed of hostnames and addresses.</span>
         </div>
       </section>
 
@@ -53,27 +71,69 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Screenshot coming</span>
-          <span class="sub">A screenshot with internal identifiers cropped or redacted per the publishing checklist.</span>
+          <span class="sub">A pull request against a protected branch with required checks
+            reporting status. Captured per the publishing checklist - hostnames and repo detail
+            redacted.</span>
         </div>
       </section>
 
       <section class="block">
         <h2>Lessons learned &amp; gotchas</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="callout">
+          <span class="tag">Gotcha - the credential that pushes cannot call the API</span>
+          The one that cost me a genuinely confusing afternoon: the OS/browser git credential
+          helper authenticates <code>git push</code> perfectly, but the <b>same</b> credential
+          returns <code>401</code> against the REST API used to open a pull request. It is scoped
+          to git transport operations, not to the API surface, so "my git works, why is the API
+          rejecting me?" has a real answer. The fix is to stop reusing the git credential for API
+          calls entirely: automation authenticates to the API with a dedicated <b>personal access
+          token</b>, fetched from the secrets manager at run time and never written to disk. Push
+          and API are two different doors with two different keys.
+        </div>
+        <ul>
+          <li><b>One canonical way to open a PR.</b> Rather than hand-curling the API and
+            rediscovering the 401 every time, the lab has a single PR-opening path that pulls the
+            right token and does it correctly - so the gotcha is solved once, in one place.</li>
+          <li><b>Keep the token out of the command line.</b> An API token pasted as an argument
+            leaks into shell history and process listings. The helper fetches it and uses it in
+            memory; it never becomes a visible argument or a file.</li>
+          <li><b>Protect the branch, then honour it everywhere.</b> Branch protection only means
+            something if automation is subject to it too - the moment a bot can bypass the gate,
+            the gate is decorative.</li>
+        </ul>
       </section>
 
       <section class="block">
         <h2>Impact</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="stats">
+          <div class="stat">
+            <div class="num">PR-only</div>
+            <div class="label">path to main</div>
+          </div>
+          <div class="stat">
+            <div class="num">1 way</div>
+            <div class="label">to open a PR, done right</div>
+          </div>
+          <div class="stat">
+            <div class="num">Token</div>
+            <div class="label">from the secrets manager</div>
+          </div>
+        </div>
+        <p>Gitea is the anchor the whole change-control story hangs from: branch, review, gate,
+          merge - for people and machines alike. The auth gotcha is a small, sharp reminder that
+          "it authenticated once" does not mean "it is authorized for what you are about to do" -
+          scope matters, and the clean fix is a purpose-scoped credential, not reusing the one you
+          already had.</p>
       </section>
 
       <section class="block">
         <h2>Code &amp; further reading</h2>
         <div class="links">
-          <a href="#" aria-disabled="true">Repo (link coming)</a>
+          <a href="#" aria-disabled="true">PR tooling (link coming)</a>
+          <a href="https://docs.gitea.com/" rel="noopener">Gitea docs</a>
         </div>
-        <p class="note">Repository links point to scrubbed, public-safe versions of the lab's
-          code. Internal addresses, hostnames, and secrets are never published.</p>
+        <p class="note">Published tooling is scrubbed of hostnames, addresses, and any token
+          material before it goes public; tokens always come from the secrets manager.</p>
       </section>
     </div>
 
