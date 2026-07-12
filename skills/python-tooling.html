@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Python tooling - Skills - Bill Gernert</title>
-  <meta name="description" content="Python tooling in AutomationLab - writeup coming. The glue scripts that automate the pipelines end to end.">
+  <meta name="description" content="How I build the Python glue that automates AutomationLab - one canonical way per task, secrets fetched in memory, and tools that bootstrap their own auth instead of assuming ambient state.">
   <meta name="color-scheme" content="dark">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230a0e1a'/><polygon points='50,14 81,32 81,68 50,86 19,68 19,32' fill='none' stroke='%2300d4ff' stroke-width='5'/><circle cx='50' cy='50' r='9' fill='%2300ff96'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,18 +25,37 @@
     <header class="skill-head">
       <span class="badge" data-accent="green">Automation &amp; Tooling</span>
       <h1>Python tooling</h1>
-      <p class="descriptor">The glue scripts that automate the pipelines end to end.</p>
+      <p class="descriptor">The glue that automates the platform - small, idempotent scripts with one canonical way to do each task, secrets fetched in memory, and tools that bootstrap their own auth instead of assuming the box is already set up.</p>
     </header>
 
     <div class="skill-body">
       <section class="block">
         <h2>What it is &amp; why I use it</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <p>A lot of AutomationLab is held together by Python: the helpers that open pull requests,
+          allocate addresses, register hosts, and talk to the platform's many APIs. These scripts
+          are the connective tissue between the big tools - the part that makes a pipeline one flow
+          instead of a stack of manual steps.</p>
+        <p>I treat this glue as real software, not throwaway. It is versioned, reviewed, and built
+          so anyone (including a fresh automation run on a box that has never done this before) gets
+          the same result. Convenience scripts that only work on the author's machine are how a
+          platform quietly becomes un-runnable by anyone else.</p>
       </section>
 
       <section class="block">
         <h2>How I use it in the lab</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <ul>
+          <li><b>One canonical way per task.</b> Opening a pull request, for example, has a single
+            script that does it correctly - so the tricky parts are solved once, in one place,
+            instead of rediscovered each time.</li>
+          <li><b>Secrets fetched, never stored.</b> Tools that need a credential pull it from the
+            secrets manager at run time and hold it in memory - never written to disk, never passed
+            as a command-line argument where it would leak into history.</li>
+          <li><b>Idempotent and re-runnable.</b> Scripts are written so running them twice is safe -
+            they converge to the intended state rather than blindly repeating side effects.</li>
+          <li><b>Self-bootstrapping auth.</b> Rather than assuming an already-authenticated CLI is
+            present, the credential helpers can establish their own scoped login, so the same tool
+            works on any box (see the gotcha).</li>
+        </ul>
       </section>
 
       <section class="block">
@@ -44,7 +63,9 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Diagram coming</span>
-          <span class="sub">A scrubbed architecture diagram - no addresses or internal hostnames.</span>
+          <span class="sub">A helper: bootstrap a scoped login -&gt; fetch the one secret it needs
+            -&gt; call the API in memory -&gt; exit, leaving nothing on disk. Scrubbed of endpoints
+            and secret paths.</span>
         </div>
       </section>
 
@@ -53,27 +74,71 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Screenshot coming</span>
-          <span class="sub">A screenshot with internal identifiers cropped or redacted per the publishing checklist.</span>
+          <span class="sub">The PR-opening helper running on a fresh box, bootstrapping its own
+            auth and succeeding with no token file present. Captured per the publishing checklist -
+            endpoints and any token material redacted.</span>
         </div>
       </section>
 
       <section class="block">
         <h2>Lessons learned &amp; gotchas</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="callout">
+          <span class="tag">Gotcha - "works on my machine" is an ambient-state bug</span>
+          The trap in glue code is silently depending on <b>ambient state</b> - an
+          already-authenticated CLI, a config file, an environment variable that happens to be set
+          on the author's box. It runs perfectly there and fails the moment it lands on a fresh
+          agent or a different operating system, usually with a confusing auth or path error rather
+          than an honest "I need X." The fix is to make tools <b>self-sufficient</b>: fetch the
+          secret they need directly (falling back to bootstrapping their own scoped login when no
+          authenticated client is present), and never assume the environment has been hand-prepared.
+          A tool that only works where it was written is not automation - it is a manual step
+          wearing a script's clothes.
+        </div>
+        <ul>
+          <li><b>Keep secrets off disk and out of argv.</b> A token in a temp file or a command
+            argument leaks into backups, logs, and shell history. Fetch it, use it in memory,
+            discard it - the safest place for a secret is nowhere persistent.</li>
+          <li><b>Cross-platform on purpose.</b> The lab is driven from more than one operating
+            system, so tools use the portable invocation rather than assuming one shell's paths and
+            binaries. "It only runs on Linux" is a limitation you discover at the worst time.</li>
+          <li><b>Idempotence beats cleverness.</b> A re-runnable script that converges is worth more
+            than a clever one that only works if the starting state is exactly right - because in
+            practice the starting state never is.</li>
+        </ul>
       </section>
 
       <section class="block">
         <h2>Impact</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="stats">
+          <div class="stat">
+            <div class="num">1 way</div>
+            <div class="label">per task, solved once</div>
+          </div>
+          <div class="stat">
+            <div class="num">0</div>
+            <div class="label">secrets on disk</div>
+          </div>
+          <div class="stat">
+            <div class="num">Any box</div>
+            <div class="label">same result</div>
+          </div>
+        </div>
+        <p>The Python glue is what makes the platform's many tools behave as one system rather than
+          a set of tricks that only the author can run. The lasting lesson is to treat glue code as
+          software with the same standards as everything else: no ambient assumptions, no secrets on
+          disk, and idempotence by default - so the automation actually runs anywhere, not just
+          where it was born.</p>
       </section>
 
       <section class="block">
         <h2>Code &amp; further reading</h2>
         <div class="links">
-          <a href="#" aria-disabled="true">Repo (link coming)</a>
+          <a href="#" aria-disabled="true">Helper scripts (link coming)</a>
+          <a href="https://peps.python.org/pep-0020/" rel="noopener">The Zen of Python</a>
         </div>
-        <p class="note">Repository links point to scrubbed, public-safe versions of the lab's
-          code. Internal addresses, hostnames, and secrets are never published.</p>
+        <p class="note">Published scripts are scrubbed of endpoints, hostnames, secret paths, and
+          any token material before they go public; credentials always come from the secrets
+          manager.</p>
       </section>
     </div>
 

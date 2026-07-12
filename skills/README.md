@@ -23,10 +23,10 @@ site/skills/
 
 There is no generator to run and no config to edit by hand beyond one card. Two steps:
 
-1. **Copy a page.** Duplicate an existing skill page as `<new-skill>.html`. Start from a
-   placeholder page (e.g. `helm.html`) for the empty template, or from a filled example
-   (`proxmox.html`, `grafana.html`, `incident-postmortem.html`) if you want the structure
-   with real content next to you as a guide. Then edit, in the copied file only:
+1. **Copy a page.** Duplicate an existing skill page as `<new-skill>.html`. All 27 pages are
+   now written up, so copy any filled example (`proxmox.html`, `grafana.html`,
+   `incident-postmortem.html` are good structural references) and clear the sections you have
+   not written yet back to the `Writeup coming` placeholder. Then edit, in the copied file only:
    - the `<title>` and `<meta name="description">`
    - the breadcrumb's `<span class="here">` label
    - the `<span class="badge" data-accent="...">` category label and accent

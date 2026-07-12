@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>OPNsense - Skills - Bill Gernert</title>
-  <meta name="description" content="OPNsense in AutomationLab - writeup coming. The firewall and routing layer between segmented VLANs.">
+  <meta name="description" content="How I run OPNsense as the firewall and router of AutomationLab - default-deny between segments, first-match rule ordering, and applying changes without locking myself out.">
   <meta name="color-scheme" content="dark">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230a0e1a'/><polygon points='50,14 81,32 81,68 50,86 19,68 19,32' fill='none' stroke='%2300d4ff' stroke-width='5'/><circle cx='50' cy='50' r='9' fill='%2300ff96'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,18 +25,36 @@
     <header class="skill-head">
       <span class="badge" data-accent="cyan">Networking &amp; Edge</span>
       <h1>OPNsense</h1>
-      <p class="descriptor">The firewall and routing layer between segmented VLANs.</p>
+      <p class="descriptor">The firewall and router between the lab's segments - where default-deny is enforced, and where a rule's position on the list matters as much as what the rule says.</p>
     </header>
 
     <div class="skill-body">
       <section class="block">
         <h2>What it is &amp; why I use it</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <p>OPNsense is the firewall and routing brain of AutomationLab. It routes between the
+          role-based network segments and enforces what may cross between them. If VLANs draw the
+          boundaries, OPNsense is what actually decides whether a given packet is allowed over
+          one - it is where inter-segment policy lives and is enforced.</p>
+        <p>I use it because it gives me a real, inspectable firewall with a full rule model rather
+          than a black-box appliance. That matters for a lab whose whole point is understanding the
+          system end to end: I can see exactly which rule permitted or dropped a flow, and why.</p>
       </section>
 
       <section class="block">
         <h2>How I use it in the lab</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <ul>
+          <li><b>Router between segments.</b> It carries and filters traffic between the
+            role-based network segments, so cross-segment flow is a firewall decision, not an
+            open path.</li>
+          <li><b>Default-deny, explicit allows.</b> The baseline between segments is deny; the
+            specific flows that are actually needed are permitted by named, justified rules.</li>
+          <li><b>Enforces the crown-jewel boundary.</b> The most sensitive segments get the
+            tightest rule sets, so very little is even permitted to reach them across a
+            boundary.</li>
+          <li><b>The management path is itself protected.</b> Access to the firewall's own
+            administration is constrained - the thing that controls the network is not casually
+            reachable from everywhere on it.</li>
+        </ul>
       </section>
 
       <section class="block">
@@ -44,7 +62,9 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Diagram coming</span>
-          <span class="sub">A scrubbed architecture diagram - no addresses or internal hostnames.</span>
+          <span class="sub">Role-based segments meeting at the firewall, default-deny between them
+            with explicit allows, and a protected management path. Scrubbed of interfaces, VLAN
+            IDs, subnet ranges, and addresses.</span>
         </div>
       </section>
 
@@ -53,27 +73,72 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Screenshot coming</span>
-          <span class="sub">A screenshot with internal identifiers cropped or redacted per the publishing checklist.</span>
+          <span class="sub">A rule set showing default-deny with ordered, specific allows, and a
+            live log of a flow being matched. Captured per the publishing checklist - interfaces,
+            VLAN IDs, subnets, and addresses redacted.</span>
         </div>
       </section>
 
       <section class="block">
         <h2>Lessons learned &amp; gotchas</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="callout">
+          <span class="tag">Gotcha - rule order decides the outcome, and a bad rule can lock you out</span>
+          Two things about firewall changes that punish carelessness. First, rules are
+          <b>first-match, top-down</b>: a broad allow sitting <i>above</i> a specific deny wins, so
+          two rule sets with the identical rules in a different order enforce different policy.
+          "The deny is there" is meaningless if a permissive rule above it matches first - position
+          is policy. Second, the firewall is the one device that can <b>sever your own access to
+          it</b>: apply a management or cross-segment rule that blocks the very session you are
+          working over, and you have locked yourself out of the box that controls the network. The
+          discipline is to make firewall changes so a bad one reverts on its own if you do not
+          confirm it - change, verify you still have access, then commit - rather than applying a
+          rule that could strand you with no way back in.
+        </div>
+        <ul>
+          <li><b>Read rules in evaluation order, not as a set.</b> When a flow behaves unexpectedly,
+            walk the rules top-down as the firewall does - the first match wins, and the rule you
+            assumed applied may be sitting below one that caught the packet first.</li>
+          <li><b>Never blind-apply a change to the path you are on.</b> A rule touching management
+            or the segment you are connected over gets applied with a rollback safety net, so a
+            mistake reverts instead of locking you out. This is the network cousin of ensuring SSH
+            stays permitted before a default-deny lands.</li>
+          <li><b>Log the denies you care about.</b> A silent drop looks identical to a
+            misconfiguration. Logging the important denies turns "why is this not working?" into a
+            visible, matched rule you can actually reason about.</li>
+        </ul>
       </section>
 
       <section class="block">
         <h2>Impact</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="stats">
+          <div class="stat">
+            <div class="num">Deny</div>
+            <div class="label">by default between segments</div>
+          </div>
+          <div class="stat">
+            <div class="num">Order</div>
+            <div class="label">is policy, first match wins</div>
+          </div>
+          <div class="stat">
+            <div class="num">Rollback</div>
+            <div class="label">on risky rule changes</div>
+          </div>
+        </div>
+        <p>OPNsense is where the lab's segmentation stops being a diagram and becomes enforced
+          policy. The lasting lessons are that a firewall rule's <i>position</i> is as load-bearing
+          as its content, and that the device controlling the network is the one most able to lock
+          you out of itself - so you change it in a way that fails safe, verifying access before you
+          commit.</p>
       </section>
 
       <section class="block">
         <h2>Code &amp; further reading</h2>
         <div class="links">
-          <a href="#" aria-disabled="true">Repo (link coming)</a>
+          <a href="#" aria-disabled="true">Firewall notes (link coming)</a>
+          <a href="https://docs.opnsense.org/" rel="noopener">OPNsense docs</a>
         </div>
-        <p class="note">Repository links point to scrubbed, public-safe versions of the lab's
-          code. Internal addresses, hostnames, and secrets are never published.</p>
+        <p class="note">Any published firewall notes are scrubbed of interfaces, VLAN IDs, subnet
+          ranges, addresses, and rule detail before they go public.</p>
       </section>
     </div>
 
