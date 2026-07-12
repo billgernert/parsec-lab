@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>VLANs - Skills - Bill Gernert</title>
-  <meta name="description" content="VLANs in AutomationLab - writeup coming. Segmented network design separating infra, compute, and identity.">
+  <meta name="description" content="How I segment the lab network with VLANs - separating infrastructure, compute, and identity, with default-deny between them to contain lateral movement.">
   <meta name="color-scheme" content="dark">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230a0e1a'/><polygon points='50,14 81,32 81,68 50,86 19,68 19,32' fill='none' stroke='%2300d4ff' stroke-width='5'/><circle cx='50' cy='50' r='9' fill='%2300ff96'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,18 +25,36 @@
     <header class="skill-head">
       <span class="badge" data-accent="cyan">Networking &amp; Edge</span>
       <h1>VLANs</h1>
-      <p class="descriptor">Segmented network design separating infra, compute, and identity.</p>
+      <p class="descriptor">Segmented networking so a foothold in one place is not a foothold everywhere - infrastructure, compute, and identity on separate segments, default-deny between them.</p>
     </header>
 
     <div class="skill-body">
       <section class="block">
         <h2>What it is &amp; why I use it</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <p>The lab network is split into separate VLAN segments by role rather than run as one
+          flat network. Broadly: an infrastructure segment, a compute/cluster segment, and an
+          identity segment, each its own broadcast domain, with traffic between them passing
+          through the firewall rather than flowing freely.</p>
+        <p>I segment because a flat network means that anything which compromises one host can
+          reach every other host directly. Segmentation turns "own one box, reach the whole lab"
+          into "own one box, and now face a firewall to get anywhere else" - it is the network
+          expression of <b>least privilege and blast-radius containment</b>.</p>
       </section>
 
       <section class="block">
         <h2>How I use it in the lab</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <ul>
+          <li><b>Segments by role.</b> Infrastructure services, the compute/cluster workloads, and
+            identity systems live on distinct segments, so unrelated things are not sharing one
+            flat broadcast domain.</li>
+          <li><b>Routing through the firewall.</b> Cross-segment traffic is routed and filtered by
+            the firewall, which is where inter-segment policy is actually enforced.</li>
+          <li><b>Default-deny between segments.</b> The baseline is that segments cannot talk to
+            each other; specific, necessary flows are opened explicitly rather than assumed.</li>
+          <li><b>Least-exposure placement.</b> Where a system sits is a security decision - the
+            more sensitive the role, the more constrained what may reach it across a segment
+            boundary.</li>
+        </ul>
       </section>
 
       <section class="block">
@@ -44,7 +62,9 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Diagram coming</span>
-          <span class="sub">A scrubbed architecture diagram - no addresses or internal hostnames.</span>
+          <span class="sub">Role-based segments (infrastructure / compute / identity), each its
+            own domain, with the firewall as the default-deny chokepoint between them. Scrubbed of
+            subnet ranges, VLAN numbers, and addresses.</span>
         </div>
       </section>
 
@@ -53,27 +73,69 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Screenshot coming</span>
-          <span class="sub">A screenshot with internal identifiers cropped or redacted per the publishing checklist.</span>
+          <span class="sub">The inter-segment rule set showing default-deny with a handful of
+            explicit, justified allows. Captured per the publishing checklist - subnets, VLAN IDs,
+            and addresses redacted.</span>
         </div>
       </section>
 
       <section class="block">
         <h2>Lessons learned &amp; gotchas</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="callout">
+          <span class="tag">Gotcha - one broad "allow" quietly undoes the whole segmentation</span>
+          Segmentation is only as strong as its narrowest rule, and it dies to convenience. The
+          day something does not work across segments, the tempting fix is a broad
+          <b>any-to-any allow</b> "just to get it running" - and the moment that rule exists, the
+          two segments are effectively one flat network again, except now it <i>looks</i>
+          segmented on the diagram. The whole lateral-movement protection is gone and nothing
+          visibly broke, so no one notices. The discipline is to open the <b>specific</b> flow that
+          is actually needed - source, destination, port - and never the shortcut. A permissive
+          rule buried in a default-deny policy is worse than no policy, because it grants false
+          confidence.
+        </div>
+        <ul>
+          <li><b>Segmentation has an ongoing cost, and that is the point.</b> Every legitimate
+            cross-segment flow has to be an explicit rule. That friction is not a bug - it is what
+            forces you to know and justify what talks to what.</li>
+          <li><b>A forgotten allow is a real outage too.</b> Default-deny means a new service that
+            needs to cross a boundary will simply not work until its rule exists. "It is a firewall
+            rule" belongs on the checklist when adding anything that spans segments.</li>
+          <li><b>Put the crown jewels behind the tightest boundary.</b> Identity and secrets
+            deserve the most constrained segment - the fewer things that can even reach them across
+            a boundary, the smaller the attack surface for the things that matter most.</li>
+        </ul>
       </section>
 
       <section class="block">
         <h2>Impact</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="stats">
+          <div class="stat">
+            <div class="num">3</div>
+            <div class="label">role-based segments</div>
+          </div>
+          <div class="stat">
+            <div class="num">Deny</div>
+            <div class="label">between segments by default</div>
+          </div>
+          <div class="stat">
+            <div class="num">Explicit</div>
+            <div class="label">cross-segment flows only</div>
+          </div>
+        </div>
+        <p>VLAN segmentation is what keeps a single compromised host from being a compromise of the
+          whole lab. The lasting lesson is that the control lives in the discipline, not the
+          diagram: default-deny with narrow, justified allows is real containment, while one broad
+          shortcut rule silently collapses it back into a flat network that only looks segmented.</p>
       </section>
 
       <section class="block">
         <h2>Code &amp; further reading</h2>
         <div class="links">
-          <a href="#" aria-disabled="true">Repo (link coming)</a>
+          <a href="#" aria-disabled="true">Segmentation notes (link coming)</a>
+          <a href="https://en.wikipedia.org/wiki/Network_segmentation" rel="noopener">Network segmentation</a>
         </div>
-        <p class="note">Repository links point to scrubbed, public-safe versions of the lab's
-          code. Internal addresses, hostnames, and secrets are never published.</p>
+        <p class="note">Any published network notes are scrubbed of subnet ranges, VLAN IDs,
+          addresses, and hostnames before they go public.</p>
       </section>
     </div>
 

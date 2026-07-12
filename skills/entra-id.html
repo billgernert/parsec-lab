@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Entra ID - Skills - Bill Gernert</title>
-  <meta name="description" content="Entra ID in AutomationLab - writeup coming. Hybrid identity synced from on-prem AD via AD Connect.">
+  <meta name="description" content="How I run hybrid cloud identity with Entra ID in AutomationLab - synced from on-prem AD, gated by Conditional Access, with a break-glass account that never gets locked out.">
   <meta name="color-scheme" content="dark">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230a0e1a'/><polygon points='50,14 81,32 81,68 50,86 19,68 19,32' fill='none' stroke='%2300d4ff' stroke-width='5'/><circle cx='50' cy='50' r='9' fill='%2300ff96'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,18 +25,38 @@
     <header class="skill-head">
       <span class="badge" data-accent="cyan">Security &amp; Identity</span>
       <h1>Entra ID</h1>
-      <p class="descriptor">Hybrid identity synced from on-prem AD via AD Connect.</p>
+      <p class="descriptor">The cloud side of hybrid identity - on-prem accounts synced up, then gated by Conditional Access, with one hard rule: never write a policy that can lock out the break-glass account.</p>
     </header>
 
     <div class="skill-body">
       <section class="block">
         <h2>What it is &amp; why I use it</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <p>Entra ID is the cloud identity plane for AutomationLab. On-prem Active Directory is the
+          source of authority; an identity-sync bridge projects those accounts into Entra so cloud
+          services can authenticate against the same identities. On top of that, <b>Conditional
+          Access</b> decides the terms under which access is actually granted - not just who you
+          are, but from where, on what, and with what assurance.</p>
+        <p>I use it because modern access is not a binary "authenticated or not" - it is policy.
+          Conditional Access is where "require a second factor," "only from a compliant device,"
+          and "block risky sign-ins" get expressed and enforced for cloud-facing identity.</p>
       </section>
 
       <section class="block">
         <h2>How I use it in the lab</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <ul>
+          <li><b>Synced from on-prem.</b> Accounts originate in on-prem AD and flow up through the
+            sync bridge, so the same identity works across both worlds and authority stays on
+            one side.</li>
+          <li><b>Conditional Access as the gate.</b> Policies express the conditions for access -
+            factor requirements, device posture, blocking risky patterns - rather than trusting a
+            password alone.</li>
+          <li><b>Layered with the other controls.</b> Conditional Access sits alongside the second
+            factor and the zero-trust edge, so cloud access requires identity <i>and</i> conditions
+            <i>and</i> the factors below it.</li>
+          <li><b>A protected break-glass account.</b> An emergency account is deliberately excluded
+            from the policies that could lock everyone out, and is monitored precisely because it
+            is exempt (see the gotcha).</li>
+        </ul>
       </section>
 
       <section class="block">
@@ -44,7 +64,9 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Diagram coming</span>
-          <span class="sub">A scrubbed architecture diagram - no addresses or internal hostnames.</span>
+          <span class="sub">On-prem AD -&gt; sync bridge -&gt; Entra ID -&gt; Conditional Access
+            gate on access, with the break-glass account excluded from lock-out-capable policies.
+            Scrubbed of tenant, domain, and account detail.</span>
         </div>
       </section>
 
@@ -53,27 +75,69 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Screenshot coming</span>
-          <span class="sub">A screenshot with internal identifiers cropped or redacted per the publishing checklist.</span>
+          <span class="sub">A Conditional Access policy with its exclusions, and a sign-in being
+            evaluated against it. Captured per the publishing checklist - tenant, domain,
+            usernames, and addresses redacted.</span>
         </div>
       </section>
 
       <section class="block">
         <h2>Lessons learned &amp; gotchas</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="callout">
+          <span class="tag">Gotcha - a Conditional Access policy can lock you out of your own tenant</span>
+          The self-inflicted outage that Conditional Access is famous for: you write a well-meaning
+          "require compliant device" or "block legacy auth" policy scoped to <b>all users</b>, it
+          applies to the administrators too - including <i>you</i> - and now no one can get in to
+          fix it, because fixing it requires the access the policy just denied. The guard is a
+          <b>break-glass account excluded from the policy</b>, created before you need it and
+          tested, so there is always one identity that can reach the tenant when a policy goes
+          wrong. And exclusions cut both ways: an exempt account is a standing hole, so it gets a
+          long unique credential and its sign-ins are watched closely. Never roll out an
+          all-users policy without first confirming the emergency door is carved out.
+        </div>
+        <ul>
+          <li><b>Test policies on a scoped group first.</b> Rolling a new Conditional Access policy
+            straight to all users is how tenant-wide lockouts happen. Pilot it on a small group,
+            confirm the behaviour, then widen - the blast radius of an identity policy is everyone.</li>
+          <li><b>Exclusions are security-relevant, not just convenience.</b> Every account excluded
+            from a protective policy is an exception to your own rules - so exclusions are kept few,
+            deliberate, and monitored, never quietly accumulated.</li>
+          <li><b>Authority on one side, enforcement on the other.</b> Accounts are authoritative
+            on-prem while access conditions are enforced in the cloud - keeping that split clear
+            avoids "why did my change not take?" confusion about which system owns what.</li>
+        </ul>
       </section>
 
       <section class="block">
         <h2>Impact</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="stats">
+          <div class="stat">
+            <div class="num">Hybrid</div>
+            <div class="label">identity, one authority</div>
+          </div>
+          <div class="stat">
+            <div class="num">Policy</div>
+            <div class="label">gated cloud access</div>
+          </div>
+          <div class="stat">
+            <div class="num">1</div>
+            <div class="label">break-glass, always excluded</div>
+          </div>
+        </div>
+        <p>Entra ID extends the lab's identity into the cloud and lets access be governed by
+          conditions instead of a bare password. The lesson that outranks the rest is operational
+          humility: the same policy that protects the tenant can lock you out of it, so you build
+          the escape hatch first, test it, and only then turn the policy on for everyone.</p>
       </section>
 
       <section class="block">
         <h2>Code &amp; further reading</h2>
         <div class="links">
-          <a href="#" aria-disabled="true">Repo (link coming)</a>
+          <a href="#" aria-disabled="true">Policy notes (link coming)</a>
+          <a href="https://learn.microsoft.com/en-us/entra/identity/conditional-access/" rel="noopener">Conditional Access</a>
         </div>
-        <p class="note">Repository links point to scrubbed, public-safe versions of the lab's
-          code. Internal addresses, hostnames, and secrets are never published.</p>
+        <p class="note">Any published policy notes are scrubbed of tenant, domain, usernames, and
+          addresses before they go public.</p>
       </section>
     </div>
 

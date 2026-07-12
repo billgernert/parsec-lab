@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AD CS / PKI - Skills - Bill Gernert</title>
-  <meta name="description" content="AD CS / PKI in AutomationLab - writeup coming. The internal certificate authority backing trust across the lab.">
+  <meta name="description" content="How I run an internal certificate authority in AutomationLab - the root of trust, certificate templates as a privilege boundary, and revocation that fails closed.">
   <meta name="color-scheme" content="dark">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230a0e1a'/><polygon points='50,14 81,32 81,68 50,86 19,68 19,32' fill='none' stroke='%2300d4ff' stroke-width='5'/><circle cx='50' cy='50' r='9' fill='%2300ff96'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,18 +25,36 @@
     <header class="skill-head">
       <span class="badge" data-accent="cyan">Security &amp; Identity</span>
       <h1>AD CS / PKI</h1>
-      <p class="descriptor">The internal certificate authority backing trust across the lab.</p>
+      <p class="descriptor">The internal certificate authority that everything else trusts - which makes its templates a privilege boundary and its revocation path a thing that must never quietly fail.</p>
     </header>
 
     <div class="skill-body">
       <section class="block">
         <h2>What it is &amp; why I use it</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <p>The lab runs its own internal certificate authority (AD CS) as the <b>root of trust</b>
+          for private services. Certificates it issues let internal systems prove who they are and
+          encrypt traffic without leaning on a public CA for names that never leave the lab. It is
+          the machine-identity counterpart to the human-identity work in the directory.</p>
+        <p>I run my own PKI because trust has to come from somewhere, and for internal names that
+          somewhere should be under my control and understood end to end - not a black box. Owning
+          the CA means owning what a certificate from it actually attests to.</p>
       </section>
 
       <section class="block">
         <h2>How I use it in the lab</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <ul>
+          <li><b>A root of trust for internal names.</b> The CA anchors trust for services that
+            are only ever reached inside the lab, so those can be properly TLS-protected without a
+            public certificate.</li>
+          <li><b>Templates define what can be issued.</b> Certificate templates control what kinds
+            of certs exist and who may enroll for them - they are the policy layer of the CA, not
+            just a convenience.</li>
+          <li><b>Scoped enrollment.</b> Enrollment permissions are kept tight, so the ability to
+            obtain a given class of certificate is a deliberately granted privilege.</li>
+          <li><b>Revocation as a real path.</b> A compromised or retired certificate can be
+            revoked, and clients are expected to check revocation - which only works if the
+            revocation information is actually reachable (see the gotcha).</li>
+        </ul>
       </section>
 
       <section class="block">
@@ -44,7 +62,9 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Diagram coming</span>
-          <span class="sub">A scrubbed architecture diagram - no addresses or internal hostnames.</span>
+          <span class="sub">Root of trust -&gt; templates (what may be issued, and to whom) -&gt;
+            issued certs -&gt; revocation distribution that clients check. Scrubbed of the CA name,
+            host, and addresses.</span>
         </div>
       </section>
 
@@ -53,27 +73,72 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Screenshot coming</span>
-          <span class="sub">A screenshot with internal identifiers cropped or redacted per the publishing checklist.</span>
+          <span class="sub">A template's enrollment permissions and an issued certificate chaining
+            to the internal root. Captured per the publishing checklist - CA name, hostnames, and
+            addresses redacted.</span>
         </div>
       </section>
 
       <section class="block">
         <h2>Lessons learned &amp; gotchas</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="callout">
+          <span class="tag">Gotcha - a certificate template is a privilege escalation path</span>
+          The dangerous misconfiguration in a PKI is not a weak key - it is an over-permissive
+          <b>template</b>. If a template that issues an authentication-capable certificate lets a
+          low-privilege user both enroll and supply their own identity, that user can effectively
+          mint a credential that impersonates someone more privileged. The CA was configured to do
+          exactly what it was told; the mistake was telling it that a broad group could enroll for
+          a powerful certificate. Templates have to be treated as authorization policy: who may
+          enroll, for what, and whether they can influence the subject - reviewed as carefully as
+          any other grant of privilege.
+        </div>
+        <ul>
+          <li><b>Revocation fails closed - so its endpoint is critical.</b> If clients are checking
+            revocation and the distribution point is unreachable or the revocation list is stale
+            and expired, strict clients reject <i>valid</i> certificates. The revocation path is
+            infrastructure you have to keep healthy, not a set-and-forget detail - a dead CRL
+            endpoint is an outage of everything that trusts the CA.</li>
+          <li><b>Protect the root above all.</b> The root's private key is the whole ballgame -
+            anything it signs is trusted. It gets the most protection and the least routine
+            exposure, because a compromised root is not a certificate problem, it is a
+            start-over.</li>
+          <li><b>Short-lived beats never-expiring.</b> A certificate you must remember to revoke is
+            a liability; one that expires on its own limits the damage window when revocation is
+            missed. Lean on lifetime as a backstop to revocation, not a replacement for it.</li>
+        </ul>
       </section>
 
       <section class="block">
         <h2>Impact</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="stats">
+          <div class="stat">
+            <div class="num">1</div>
+            <div class="label">internal root of trust</div>
+          </div>
+          <div class="stat">
+            <div class="num">Templates</div>
+            <div class="label">as a privilege boundary</div>
+          </div>
+          <div class="stat">
+            <div class="num">Checked</div>
+            <div class="label">revocation, kept reachable</div>
+          </div>
+        </div>
+        <p>The internal CA is what lets private services have real, verifiable identity instead of
+          self-signed guesswork. The lasting lesson is that a PKI's risk lives in its policy, not
+          its cryptography: an over-broad template hands out privilege, and a neglected revocation
+          endpoint takes trust down with it. Treat the boring parts - templates and revocation - as
+          the security surface they actually are.</p>
       </section>
 
       <section class="block">
         <h2>Code &amp; further reading</h2>
         <div class="links">
-          <a href="#" aria-disabled="true">Repo (link coming)</a>
+          <a href="#" aria-disabled="true">PKI notes (link coming)</a>
+          <a href="https://learn.microsoft.com/en-us/windows-server/identity/ad-cs/active-directory-certificate-services-overview" rel="noopener">AD CS overview</a>
         </div>
-        <p class="note">Repository links point to scrubbed, public-safe versions of the lab's
-          code. Internal addresses, hostnames, and secrets are never published.</p>
+        <p class="note">Any published PKI notes are scrubbed of the CA name, issuing hosts,
+          addresses, and template detail before they go public.</p>
       </section>
     </div>
 
