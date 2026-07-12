@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pipelines - Skills - Bill Gernert</title>
-  <meta name="description" content="Pipelines in AutomationLab - writeup coming. The provisioning flow itself: allocate, plan, approve, configure, register.">
+  <meta name="description" content="How I build pipelines in AutomationLab - centered on the private-to-public site publish pipeline: a two-repo trust boundary, a fail-closed scrub gate, and a Vault-fetched token that never touches disk.">
   <meta name="color-scheme" content="dark">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230a0e1a'/><polygon points='50,14 81,32 81,68 50,86 19,68 19,32' fill='none' stroke='%2300d4ff' stroke-width='5'/><circle cx='50' cy='50' r='9' fill='%2300ff96'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,26 +25,65 @@
     <header class="skill-head">
       <span class="badge" data-accent="green">CI/CD &amp; GitOps</span>
       <h1>Pipelines</h1>
-      <p class="descriptor">The provisioning flow itself: allocate, plan, approve, configure, register.</p>
+      <p class="descriptor">Work as pipelines, not checklists - with the private-to-public publish pipeline as the centerpiece: a one-way trust boundary that only lets scrubbed content cross from the private source of truth to the public web.</p>
     </header>
 
     <div class="skill-body">
       <section class="block">
         <h2>What it is &amp; why I use it</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <p>In AutomationLab everything meaningful runs as a pipeline - a defined, repeatable
+          sequence with gates, secrets pulled at run time, and an audit trail - rather than a
+          sequence of manual steps. This page is centered on the one I find most instructive: the
+          <b>publish pipeline</b> that ships this very site from a private repository to the public
+          web. (The provisioning flow that builds VMs is the other big one, sketched below.)</p>
+        <p>The publish pipeline is interesting because it crosses a <b>trust boundary</b>. Private
+          source and public output are two different worlds, and the pipeline's whole job is to
+          make sure only content that has passed a hard scrub ever moves from the first to the
+          second. That makes it a small, concrete example of a supply-chain control.</p>
       </section>
 
       <section class="block">
         <h2>How I use it in the lab</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <ul>
+          <li><b>Publish pipeline (the centerpiece).</b> The private git server is the source of
+            truth; a build job takes the site's public-safe subtree, runs a fail-closed scrub gate
+            over it, and only then pushes it to a public repository that a static host serves.</li>
+          <li><b>Fail-closed scrub gate.</b> The same publishing checklist that governs the content
+            runs as a pipeline step: if it finds a forbidden pattern (an internal address,
+            hostname, or secret shape), the build <b>fails and nothing is published</b>. The safe
+            default is "do not ship."</li>
+          <li><b>Secrets fetched, never stored.</b> The push to the public target uses a
+            fine-grained token fetched from the secrets manager at run time and held only in
+            memory - it is never written to disk or baked into a job.</li>
+          <li><b>Provisioning pipeline (the other one).</b> The lab's build-a-VM flow is also a
+            pipeline: allocate an address, apply infrastructure-as-code, register for monitoring,
+            configure, gate on approval, and enroll - rolling forward on partial failure and
+            reversing cleanly on decommission.</li>
+        </ul>
       </section>
 
       <section class="block">
         <h2>Architecture</h2>
+        <p>The publish pipeline as a one-way trust boundary:</p>
+        <ul>
+          <li><b>Private source of truth.</b> The self-hosted git server holds the full repo,
+            including things that must never be public.</li>
+          <li><b>Scrub gate as the crossing.</b> The build extracts only the publishable subtree
+            and runs the scrub gate. A single forbidden match aborts the publish - fail closed.</li>
+          <li><b>Public target, then served.</b> On a clean scrub, the build pushes to a public
+            repository, which a static host builds and serves. Content only ever flows
+            private -&gt; public, never back.</li>
+          <li><b>Deliberately plugin-light trigger chain.</b> A change notification reaches the
+            build controller through the git plugin's commit-notify endpoint plus a polling
+            backstop, rather than by installing a source-forge-specific controller plugin - fewer
+            plugins is a smaller attack surface for something that holds a publish credential.</li>
+        </ul>
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Diagram coming</span>
-          <span class="sub">A scrubbed architecture diagram - no addresses or internal hostnames.</span>
+          <span class="sub">Private repo -&gt; build + fail-closed scrub -&gt; push (token from
+            the secrets manager, in memory) -&gt; public repo -&gt; static host. One-way boundary.
+            Scrubbed of the controller's load-balancer address, repo URLs, and secret paths.</span>
         </div>
       </section>
 
@@ -53,27 +92,76 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Screenshot coming</span>
-          <span class="sub">A screenshot with internal identifiers cropped or redacted per the publishing checklist.</span>
+          <span class="sub">A publish run: scrub gate passing, then a push to the public target
+            and the live site updating. And a failing run where the scrub gate blocks a publish.
+            Captured per the publishing checklist - addresses, repo URLs, and token material
+            redacted.</span>
         </div>
       </section>
 
       <section class="block">
         <h2>Lessons learned &amp; gotchas</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="callout">
+          <span class="tag">Gotcha - a green webhook delivery proves nothing about builds</span>
+          The trigger looked perfect: every webhook delivery from the git server showed a
+          successful <code>200</code>, so I assumed commits were kicking off builds. They were not.
+          The commit-notify endpoint was answering, but its <b>response body</b> said
+          <code>No git jobs using repository</code> - because the job did not have <b>Poll SCM</b>
+          enabled, so nothing had registered as a polling consumer of that repo. A webhook can only
+          nudge jobs that are already watching; with none watching, the nudge is delivered and
+          discarded, and the delivery log is green the whole time. The fix was to enable polling so
+          the job registers as a consumer - and the lasting lesson is that the commit-notify
+          <b>response body is the real diagnostic</b>, not the HTTP status of the delivery.
+        </div>
+        <ul>
+          <li><b>Delivery success is not effect success.</b> "The webhook returned 200" tells you
+            the endpoint was reached, not that a build ran. Verify the thing you actually wanted -
+            a build started - not the hop before it.</li>
+          <li><b>Fail closed on a publishing gate.</b> A scrub gate that failed open - publishing
+            when the check errored or was skipped - would be worse than none, because it would feel
+            safe. The gate must treat "could not confirm clean" as "do not publish."</li>
+          <li><b>Prefer fewer plugins on anything that holds a credential.</b> Reaching the trigger
+            through a generic endpoint plus polling, instead of a bespoke plugin, keeps the
+            publish controller's attack surface small - a deliberate security tradeoff, not an
+            accident of setup.</li>
+          <li><b>Keep the publish token in memory only.</b> A token that pushes to the public
+            world is exactly the thing you never want on disk or in a job definition - fetch it at
+            run time, use it, discard it.</li>
+        </ul>
       </section>
 
       <section class="block">
         <h2>Impact</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="stats">
+          <div class="stat">
+            <div class="num">One-way</div>
+            <div class="label">private to public</div>
+          </div>
+          <div class="stat">
+            <div class="num">Fail-closed</div>
+            <div class="label">scrub gate on publish</div>
+          </div>
+          <div class="stat">
+            <div class="num">0</div>
+            <div class="label">publish tokens on disk</div>
+          </div>
+        </div>
+        <p>The publish pipeline is what lets a private, internal-detail-heavy repository safely
+          feed a public website: every deploy passes a hard scrub, the credential that crosses the
+          boundary never lands on disk, and the trigger path is kept deliberately simple. The
+          webhook gotcha is the reminder that ties it together - a pipeline is only trustworthy when
+          you verify the outcome you wanted, not the green light one step before it.</p>
       </section>
 
       <section class="block">
         <h2>Code &amp; further reading</h2>
         <div class="links">
-          <a href="#" aria-disabled="true">Repo (link coming)</a>
+          <a href="#" aria-disabled="true">Publish pipeline (link coming)</a>
+          <a href="https://www.jenkins.io/doc/book/pipeline/" rel="noopener">Pipeline as code</a>
         </div>
-        <p class="note">Repository links point to scrubbed, public-safe versions of the lab's
-          code. Internal addresses, hostnames, and secrets are never published.</p>
+        <p class="note">Published pipeline code is scrubbed of the controller's address, repo
+          URLs, secret paths, and any token material before it goes public; the publish token
+          always comes from the secrets manager.</p>
       </section>
     </div>
 

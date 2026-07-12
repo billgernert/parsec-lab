@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Prometheus - Skills - Bill Gernert</title>
-  <meta name="description" content="Prometheus in AutomationLab - writeup coming. Metrics collection and alerting rules for cluster and host health.">
+  <meta name="description" content="How I use Prometheus in AutomationLab - metrics and alerting rules, and the sharp gotcha that a down target goes absent, not to zero.">
   <meta name="color-scheme" content="dark">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230a0e1a'/><polygon points='50,14 81,32 81,68 50,86 19,68 19,32' fill='none' stroke='%2300d4ff' stroke-width='5'/><circle cx='50' cy='50' r='9' fill='%2300ff96'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,18 +25,38 @@
     <header class="skill-head">
       <span class="badge" data-accent="green">Observability</span>
       <h1>Prometheus</h1>
-      <p class="descriptor">Metrics collection and alerting rules for cluster and host health.</p>
+      <p class="descriptor">Pull-based metrics and alerting for the cluster and its hosts - and a hard-won respect for the difference between a metric that is zero and a metric that is not there at all.</p>
     </header>
 
     <div class="skill-body">
       <section class="block">
         <h2>What it is &amp; why I use it</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <p>Prometheus is the time-series metrics engine in AutomationLab. It <b>scrapes</b>
+          instrumented targets and exporters on an interval, stores the samples, and evaluates
+          alerting rules over them. It sits alongside the broader monitoring stack, feeding
+          dashboards and firing alerts on the numeric health of the cluster and the workloads on
+          it.</p>
+        <p>I use it because the pull model and the query language are a clean fit for
+          infrastructure: targets expose metrics, Prometheus discovers and scrapes them, and rules
+          turn raw series into "this is wrong, tell someone." Exporters let me bring things that do
+          not speak Prometheus natively - like hypervisor stats - into the same model.</p>
       </section>
 
       <section class="block">
         <h2>How I use it in the lab</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <ul>
+          <li><b>Scrape targets and exporters.</b> Cluster and host metrics come from instrumented
+            endpoints and purpose-built exporters that translate a system's stats into the
+            Prometheus format.</li>
+          <li><b>Alerting rules over the series.</b> Rules encode what "unhealthy" means -
+            saturation, error rates, a target that has stopped responding - and fire when the
+            condition holds.</li>
+          <li><b>Feeds the dashboards.</b> The series back the visual layer, so the same numbers
+            drive both the at-a-glance view and the alerts.</li>
+          <li><b>Exporters for the non-native.</b> Where a system does not expose Prometheus
+            metrics itself, an exporter bridges it in - keeping everything in one query model
+            instead of a special case.</li>
+        </ul>
       </section>
 
       <section class="block">
@@ -44,7 +64,8 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Diagram coming</span>
-          <span class="sub">A scrubbed architecture diagram - no addresses or internal hostnames.</span>
+          <span class="sub">Targets / exporters -&gt; scrape -&gt; time-series store -&gt; rules
+            + dashboards -&gt; alerts. Scrubbed of target addresses and hostnames.</span>
         </div>
       </section>
 
@@ -53,27 +74,69 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Screenshot coming</span>
-          <span class="sub">A screenshot with internal identifiers cropped or redacted per the publishing checklist.</span>
+          <span class="sub">A rule evaluating over a series, and an exporter's targets showing
+            healthy scrapes. Captured per the publishing checklist - target addresses and
+            hostnames redacted.</span>
         </div>
       </section>
 
       <section class="block">
         <h2>Lessons learned &amp; gotchas</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="callout">
+          <span class="tag">Gotcha - a down target goes absent, not to zero</span>
+          The alert that quietly does not work: you write a rule like "fire when the metric drops
+          to <code>0</code>," reasoning that a dead service is a zero. But when a scrape target is
+          <b>down</b>, its series does not become zero - it stops existing. The rule has no series
+          to evaluate, so it never fires, and the exact outage you built it for slips through
+          silently. The fix is to alert on <b>absence and scrape health</b> - on the target being
+          unreachable (its up signal going to <code>0</code>) or on the series being missing -
+          not on the value hitting a number that a vanished series will never report. "No data"
+          and "zero" are different states, and conflating them is how a monitor misses the thing
+          it exists to catch.
+        </div>
+        <ul>
+          <li><b>Alert on the scrape, not just the value.</b> A target that has stopped responding
+            is often the most important alert of all, and it lives in scrape health, not in the
+            business metric.</li>
+          <li><b>Watch cardinality.</b> A label with unbounded values (an id, a timestamp) quietly
+            explodes the series count and the memory with it. Keep labels to bounded, meaningful
+            dimensions - high cardinality is a slow-motion outage.</li>
+          <li><b>Rule for the state you fear, then test it by causing it.</b> The only way I trust
+            a "target down" alert is to actually stop a target in a safe window and watch it fire.
+            A rule you have never seen trigger is a guess.</li>
+        </ul>
       </section>
 
       <section class="block">
         <h2>Impact</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="stats">
+          <div class="stat">
+            <div class="num">Pull</div>
+            <div class="label">based scrape model</div>
+          </div>
+          <div class="stat">
+            <div class="num">up == 0</div>
+            <div class="label">catches a dead target</div>
+          </div>
+          <div class="stat">
+            <div class="num">Exporters</div>
+            <div class="label">bridge the non-native</div>
+          </div>
+        </div>
+        <p>Prometheus gives the lab a rigorous, queryable view of its own numbers - and the
+          absent-versus-zero lesson is the one I would hand to anyone new to it. The most dangerous
+          monitoring failure is not a wrong number; it is an alert that silently never fires
+          because the thing it watches disappeared instead of changing value.</p>
       </section>
 
       <section class="block">
         <h2>Code &amp; further reading</h2>
         <div class="links">
-          <a href="#" aria-disabled="true">Repo (link coming)</a>
+          <a href="#" aria-disabled="true">Rules &amp; exporters (link coming)</a>
+          <a href="https://prometheus.io/docs/introduction/overview/" rel="noopener">Prometheus docs</a>
         </div>
-        <p class="note">Repository links point to scrubbed, public-safe versions of the lab's
-          code. Internal addresses, hostnames, and secrets are never published.</p>
+        <p class="note">Published rules and exporter config are scrubbed of target addresses,
+          hostnames, and any secret references before they go public.</p>
       </section>
     </div>
 

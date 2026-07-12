@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Duo MFA - Skills - Bill Gernert</title>
-  <meta name="description" content="Duo MFA in AutomationLab - writeup coming. Multi-factor enforcement on privileged access paths.">
+  <meta name="description" content="How I use Duo MFA in AutomationLab - multi-factor on privileged access, and the fail-open versus fail-closed decision that defines what MFA is really worth.">
   <meta name="color-scheme" content="dark">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230a0e1a'/><polygon points='50,14 81,32 81,68 50,86 19,68 19,32' fill='none' stroke='%2300d4ff' stroke-width='5'/><circle cx='50' cy='50' r='9' fill='%2300ff96'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,18 +25,36 @@
     <header class="skill-head">
       <span class="badge" data-accent="cyan">Security &amp; Identity</span>
       <h1>Duo MFA</h1>
-      <p class="descriptor">Multi-factor enforcement on privileged access paths.</p>
+      <p class="descriptor">A second factor on the paths that matter - and a deliberate answer to the question that decides what MFA is actually worth: what happens when the MFA service itself is unreachable.</p>
     </header>
 
     <div class="skill-body">
       <section class="block">
         <h2>What it is &amp; why I use it</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <p>Duo provides the multi-factor layer on privileged access in AutomationLab. Where a
+          password alone is not enough - administrative and remote access paths - a second factor
+          (a push, a one-time code) has to be satisfied before access is granted. It is the
+          "something you have" on top of "something you know."</p>
+        <p>I use it because credentials leak; that is a when, not an if. MFA is the control that
+          makes a stolen password insufficient on its own, so the paths most worth protecting do
+          not fall to a single reused or phished secret.</p>
       </section>
 
       <section class="block">
         <h2>How I use it in the lab</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <ul>
+          <li><b>On privileged paths, not everything.</b> The second factor guards the high-value
+            access - administrative and remote entry - where the cost of a compromise is highest.</li>
+          <li><b>Layered with the edge and identity.</b> MFA sits alongside the zero-trust edge and
+            the identity provider, so protected access requires both a proven identity and a second
+            factor, not one or the other.</li>
+          <li><b>A deliberate unreachable-service policy.</b> The behavior when the MFA service
+            cannot be reached is a decision I made on purpose, not a default I inherited (see the
+            gotcha).</li>
+          <li><b>Phishing-resistant factors preferred.</b> Where possible the stronger factors are
+            favored over a simple approve-the-push, because a push a user can reflexively accept is
+            a weaker link.</li>
+        </ul>
       </section>
 
       <section class="block">
@@ -44,7 +62,9 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Diagram coming</span>
-          <span class="sub">A scrubbed architecture diagram - no addresses or internal hostnames.</span>
+          <span class="sub">Privileged access: identity check + second factor -&gt; access, with an
+            explicit policy for when the MFA service is unreachable. Scrubbed of hostnames,
+            addresses, and any enrollment detail.</span>
         </div>
       </section>
 
@@ -53,27 +73,69 @@
         <div class="frame">
           <div class="glyph" aria-hidden="true"></div>
           <span class="cap">Screenshot coming</span>
-          <span class="sub">A screenshot with internal identifiers cropped or redacted per the publishing checklist.</span>
+          <span class="sub">A privileged login prompting for the second factor before granting
+            access. Captured per the publishing checklist - usernames, hostnames, and addresses
+            redacted.</span>
         </div>
       </section>
 
       <section class="block">
         <h2>Lessons learned &amp; gotchas</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="callout">
+          <span class="tag">Gotcha - "fail open vs fail closed" is the whole security decision</span>
+          The setting that quietly decides how much your MFA is worth: what the access path does
+          when the MFA service <b>cannot be reached</b>. Fail <b>open</b> (allow on MFA failure)
+          keeps you from being locked out during an outage - but it means an attacker who can make
+          MFA unreachable has just removed your second factor entirely, turning a strong control
+          into a soft one exactly when it matters. Fail <b>closed</b> (deny on MFA failure) keeps
+          the control honest under attack - but an MFA outage now locks out legitimate admins too,
+          so it demands a tested break-glass path that does not itself depend on the thing that is
+          down. There is no free answer; the mistake is not choosing deliberately and discovering
+          your default during an incident.
+        </div>
+        <ul>
+          <li><b>Have a break-glass path, and test it.</b> Fail-closed only works if there is a
+            pre-planned, audited way in when MFA is down - one that does not route through the
+            failed service. An untested break-glass is just a different outage.</li>
+          <li><b>A push you can reflexively approve is a weak factor.</b> Prompt-bombing preys on
+            fatigue - hammer someone with pushes until they tap approve. Number-matching and
+            phishing-resistant factors blunt it; a bare approve/deny push does not.</li>
+          <li><b>MFA protects the path, not the secret behind it.</b> It stops a stolen password
+            from being enough - it does nothing for a credential that is used by machines with no
+            human to prompt. Those belong behind scoped secrets and service identity, not MFA.</li>
+        </ul>
       </section>
 
       <section class="block">
         <h2>Impact</h2>
-        <div class="coming">Writeup coming - this section will be filled in.</div>
+        <div class="stats">
+          <div class="stat">
+            <div class="num">2FA</div>
+            <div class="label">on privileged access</div>
+          </div>
+          <div class="stat">
+            <div class="num">Chosen</div>
+            <div class="label">fail-mode, not default</div>
+          </div>
+          <div class="stat">
+            <div class="num">Break-glass</div>
+            <div class="label">planned and tested</div>
+          </div>
+        </div>
+        <p>Duo makes a leaked password insufficient on the paths that matter most. The lasting
+          lesson is that MFA's real strength is set by its failure behavior, not its happy path:
+          decide fail-open versus fail-closed on purpose, build the break-glass the closed choice
+          demands, and prefer factors that a tired human cannot be tricked into approving.</p>
       </section>
 
       <section class="block">
         <h2>Code &amp; further reading</h2>
         <div class="links">
-          <a href="#" aria-disabled="true">Repo (link coming)</a>
+          <a href="#" aria-disabled="true">Access policy notes (link coming)</a>
+          <a href="https://en.wikipedia.org/wiki/Multi-factor_authentication" rel="noopener">Multi-factor authentication</a>
         </div>
-        <p class="note">Repository links point to scrubbed, public-safe versions of the lab's
-          code. Internal addresses, hostnames, and secrets are never published.</p>
+        <p class="note">Any published access-policy notes are scrubbed of hostnames, addresses,
+          usernames, and enrollment detail before they go public.</p>
       </section>
     </div>
 
