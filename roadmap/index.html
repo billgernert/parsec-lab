@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Roadmap - Bill Gernert</title>
+  <meta name="description" content="The public roadmap for AutomationLab: how the platform is planned and prioritized - tier structure, design patterns, and recorded trade-offs, in engineering-doc voice.">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230a0e1a'/><polygon points='50,14 81,32 81,68 50,86 19,68 19,32' fill='none' stroke='%2300d4ff' stroke-width='5'/><circle cx='50' cy='50' r='9' fill='%2300ff96'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../skills/style.css">
+</head>
+<body>
+  <main>
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <a href="/">parsec-lab.com</a>
+      <span class="sep">/</span>
+      <span class="here">Roadmap</span>
+    </nav>
+
+    <header class="index-hero">
+      <p class="eyebrow">Roadmap &#183; how the platform is planned</p>
+      <h1>The plan behind the platform</h1>
+      <p class="lede">
+        This is the public, genericized roadmap for AutomationLab - the reasoning a finished
+        repository cannot show on its own: how work is tiered and prioritized, the design
+        patterns it is built on, and the trade-offs made on purpose and recorded honestly.
+        Internal specifics are deliberately left out; what stays is the engineering thinking.
+      </p>
+      <div class="count-strip">
+        <span><b>3</b> tiers, phased delivery</span>
+        <span><b>1</b> change, one reviewed PR</span>
+        <span><b>1</b> lab, run as production</span>
+      </div>
+      <div class="links">
+        <a href="/skills/">See the skills portfolio &#8594;</a>
+      </div>
+    </header>
+
+    <section class="category" data-accent="cyan">
+      <h2>How this roadmap works</h2>
+      <div class="skill-body">
+        <div class="block">
+          <p>Work is organized into three tiers - <b>Now</b>, <b>Next</b>, and <b>Later</b> - by
+            dependency and leverage, not by whim. A tier is not a deadline; it is a statement of
+            what has to be true before the next thing is worth doing. Foundational capabilities
+            (provisioning, GitOps, guardrails) come first because everything above them assumes
+            they exist.</p>
+          <p>Every item is a <b>why before a what</b>: it states the problem and the reason it is
+            worth solving before the mechanism. Every change lands as one reviewed pull request
+            behind required gates, and every shipped capability has a definition of done, a
+            runbook, and - where a real decision was made - an architecture decision record.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="category" data-accent="green">
+      <h2>Tier 1 - Now: the foundation</h2>
+      <div class="skill-body">
+        <div class="block">
+          <p class="descriptor">The base the rest of the platform stands on. Largely shipped.</p>
+          <ul>
+            <li><b>Provisioning as a pipeline, not a checklist.</b> A request flows through
+              address allocation, infrastructure-as-code, monitoring registration, configuration,
+              a human approval gate, and enrollment - rolling forward on partial failure and
+              reversing cleanly on decommission.</li>
+            <li><b>Config-as-code, reviewed like code.</b> The cluster and the automation
+              controller are declared in git and reconciled continuously; nothing reaches the
+              platform except through a branch and a PR.</li>
+            <li><b>Guardrails in the merge path.</b> Lint and security scanning run as required
+              checks, and a pre-commit layer catches problems before they are even pushed.</li>
+            <li><b>Process artifacts.</b> Decisions are recorded as ADRs, emergencies get
+              blameless postmortems, and a written definition of done keeps "finished" honest.</li>
+            <li><b>A shared pipeline library.</b> Common structure and helpers are factored out so
+              a new pipeline is composed, not copy-pasted.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="category" data-accent="cyan">
+      <h2>Tier 2 - Next: observability and operations</h2>
+      <div class="skill-body">
+        <div class="block">
+          <p class="descriptor">Turning a platform that runs into one that watches and repairs itself. In progress.</p>
+          <ul>
+            <li><b>Metrics, dashboards, and logs</b> unified into a single operational view, with
+              alerting rules that fire on real conditions rather than noise.</li>
+            <li><b>A monitoring coverage audit</b> so "is this actually being watched?" has a
+              provable answer instead of an assumption.</li>
+            <li><b>Self-heal enhancements</b> that classify a failure, apply an OS-aware fix, and
+              record every outcome so remediation is auditable.</li>
+            <li><b>Reporting and digest pipelines</b> and a single-pane reports portal, so the
+              platform's state is legible at a glance.</li>
+            <li><b>Restore-and-reconcile and certificate-lifecycle pipelines</b> - recovery and
+              trust treated as routine, tested operations.</li>
+            <li><b>An internal platform API</b> as the anchor that ties the automation surface
+              together programmatically.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="category" data-accent="green">
+      <h2>Tier 3 - Later: the advanced platform</h2>
+      <div class="skill-body">
+        <div class="block">
+          <p class="descriptor">Where the platform starts to reason about itself. Planned.</p>
+          <ul>
+            <li><b>Resource orchestration and right-sizing</b> - the platform adjusting its own
+              footprint to load rather than being hand-tuned.</li>
+            <li><b>Chaos engineering with automated adjudication</b> - deliberately breaking things
+              in a controlled window and judging the blast radius, to prove resilience instead of
+              assuming it.</li>
+            <li><b>Paved-road platform-engineering projects</b> that make the safe path the easy
+              path for whatever runs on the platform next.</li>
+            <li><b>A self-heal learning ladder</b> that graduates remediation from suggest, to act
+              under approval, to act autonomously as it earns trust.</li>
+            <li><b>Remaining security and AI pipelines</b> that extend the same guardrails and
+              analysis to more of the estate.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="category" data-accent="cyan">
+      <h2>Design patterns</h2>
+      <div class="skill-body">
+        <div class="block">
+          <p>A handful of patterns recur across the roadmap; they are the load-bearing ideas, not
+            decoration.</p>
+          <div class="callout">
+            <span class="tag">Detect, then approve</span>
+            Automation observes and proposes; a human gate stands before anything destructive or
+            irreversible. The machine does the tedious detection; the person makes the call.
+          </div>
+          <div class="callout">
+            <span class="tag">Earned autonomy</span>
+            A capability graduates from "suggest" to "act under approval" to "act on its own" only
+            as it proves itself, with every outcome recorded. Trust is earned by evidence, not
+            granted by default.
+          </div>
+          <div class="callout">
+            <span class="tag">Paved road</span>
+            The safe, correct way to do something is made the easiest way - shared libraries,
+            templates, and guardrails - so doing it right is the path of least resistance.
+          </div>
+          <div class="callout">
+            <span class="tag">Roll forward, not rollback</span>
+            A partial failure cleans up forward to a consistent state rather than leaving
+            half-built wreckage; the decommission path reverses every step provisioning took.
+          </div>
+          <div class="callout">
+            <span class="tag">Fail closed by default</span>
+            When a gate cannot confirm that proceeding is safe, it denies rather than allows. A
+            false stop is preferred to a false go.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="category" data-accent="green">
+      <h2>Recorded trade-offs</h2>
+      <div class="skill-body">
+        <div class="block">
+          <p>Decisions are recorded honestly, including their costs - captured as architecture
+            decision records so the reasoning survives after the context is forgotten. A few
+            representative ones, genericized:</p>
+          <div class="callout">
+            <span class="tag">Alerting rides the platform it watches</span>
+            Notifications run on the same platform they monitor, so a full-platform outage can
+            mute its own alerts. The gap is acknowledged rather than hidden, with an
+            out-of-band notification path as the recorded follow-up.
+          </div>
+          <div class="callout">
+            <span class="tag">No new plugins on the automation controller</span>
+            The controller declines convenience plugins to keep its attack surface small, and
+            accepts a more manual trigger wiring as the deliberate, permanent cost of that
+            posture.
+          </div>
+          <div class="callout">
+            <span class="tag">Fail-closed blocks legitimate work</span>
+            Gates that deny on uncertainty will sometimes stop legitimate work when a dependency
+            is down. That false stop is the accepted price of never having a false go.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="category" data-accent="cyan">
+      <h2>How the platform proves itself</h2>
+      <div class="skill-body">
+        <div class="block">
+          <p>The roadmap is exercised by real workloads, not demos. A self-hosted, database-backed
+            application runs on the platform as a proving ground - the workload that exercises
+            schema migrations, scheduled data pipelines, and stateful deploys end to end, so the
+            platform is tested against production-shaped problems rather than toy ones.</p>
+          <p>And the discipline is uniform: branch per change, one reviewed PR, required gates,
+            a runbook per pipeline, a decision record per real choice. The roadmap is not a wish
+            list - it is a plan run the way an engineering organization runs one.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <a href="/">&#8592; parsec-lab.com</a> &#183; <a href="/skills/">skills portfolio</a> &#183; the roadmap is curated and refreshed periodically &#183; built and operated by Bill Gernert
+    </footer>
+  </main>
+</body>
+</html>
