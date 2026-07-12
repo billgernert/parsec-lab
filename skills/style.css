@@ -155,10 +155,15 @@ code {
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 3px;
-  background: linear-gradient(90deg, var(--cyan), var(--blue));
+  /* Literal colors (not var(--cyan)/var(--blue)) in these gradients on purpose: the vnu
+     (html5validator) CSS checker does not resolve custom properties, so var() color stops read
+     as "too few values for linear-gradient". Same fix already applied to site/index.html's inline
+     gradient; renders identically - the values are exactly what :root holds
+     (--cyan #00d4ff, --blue #0066ff, --green #00ff96). */
+  background: linear-gradient(90deg, #00d4ff, #0066ff);
 }
 .category[data-accent="green"] .skill-card::before {
-  background: linear-gradient(90deg, var(--green), #00cc66);
+  background: linear-gradient(90deg, #00ff96, #00cc66);
 }
 .skill-card:hover {
   text-decoration: none;
