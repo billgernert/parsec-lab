@@ -60,7 +60,7 @@
       <h2>Tier 1 - Now: the foundation</h2>
       <div class="skill-body">
         <div class="block">
-          <p class="descriptor">The base the rest of the platform stands on. Largely shipped.</p>
+          <p class="descriptor">The base the rest of the platform stands on - now in place.</p>
           <ul>
             <li><b>Provisioning as a pipeline, not a checklist.</b> A request flows through
               address allocation, infrastructure-as-code, monitoring registration, configuration,
@@ -72,9 +72,16 @@
             <li><b>Guardrails in the merge path.</b> Lint and security scanning run as required
               checks, and a pre-commit layer catches problems before they are even pushed.</li>
             <li><b>Process artifacts.</b> Decisions are recorded as ADRs, emergencies get
-              blameless postmortems, and a written definition of done keeps "finished" honest.</li>
+              blameless postmortems, a written definition of done keeps "finished" honest, and
+              every pipeline has an operator runbook.</li>
             <li><b>A shared pipeline library.</b> Common structure and helpers are factored out so
               a new pipeline is composed, not copy-pasted.</li>
+            <li><b>Dependencies stay current on their own.</b> An update bot opens reviewed pull
+              requests for new versions, so drift and known-vulnerable dependencies arrive as
+              changes to review rather than surprises to discover.</li>
+            <li><b>The public artifacts carry their own CI.</b> The published site is validated by a
+              second, independent pipeline before it ships - separate from the internal one, so the
+              public face has its own green checks.</li>
           </ul>
         </div>
       </div>
@@ -84,18 +91,26 @@
       <h2>Tier 2 - Next: observability and operations</h2>
       <div class="skill-body">
         <div class="block">
-          <p class="descriptor">Turning a platform that runs into one that watches and repairs itself. In progress.</p>
+          <p class="descriptor">Turning a platform that runs into one that watches, repairs, and triages itself. Substantially shipped, still advancing.</p>
           <ul>
             <li><b>Metrics, dashboards, and logs</b> unified into a single operational view, with
-              alerting rules that fire on real conditions rather than noise.</li>
+              alerting rules tuned so every firing alert is a real one, not noise.</li>
             <li><b>A monitoring coverage audit</b> so "is this actually being watched?" has a
               provable answer instead of an assumption.</li>
             <li><b>Self-heal enhancements</b> that classify a failure, apply an OS-aware fix, and
               record every outcome so remediation is auditable.</li>
+            <li><b>A gated AIOps triage loop.</b> Overnight alerts, failed builds, and backup and
+              monitoring signals are collected into one normalized view and triaged into a single
+              morning digest: each finding classified, correlated against history, and given a
+              proposed next step. Inference runs local-first, escalating to a stronger model only
+              for the hard cases behind a cost gate; nothing acts on its own - every fix is a
+              proposal a human approves, fail-closed throughout.</li>
             <li><b>Reporting and digest pipelines</b> and a single-pane reports portal, so the
               platform's state is legible at a glance.</li>
-            <li><b>Restore-and-reconcile and certificate-lifecycle pipelines</b> - recovery and
-              trust treated as routine, tested operations.</li>
+            <li><b>Recovery and trust as tested operations</b> - restore-and-reconcile pipelines, a
+              disaster-recovery game day that deliberately destroys and restores the secrets store
+              to prove the runbook rather than assume it, and certificate lifecycle extended so
+              internal services present certs issued by the lab's own certificate authority.</li>
             <li><b>An internal platform API</b> as the anchor that ties the automation surface
               together programmatically.</li>
           </ul>
@@ -118,8 +133,10 @@
               path for whatever runs on the platform next.</li>
             <li><b>A self-heal learning ladder</b> that graduates remediation from suggest, to act
               under approval, to act autonomously as it earns trust.</li>
-            <li><b>Remaining security and AI pipelines</b> that extend the same guardrails and
-              analysis to more of the estate.</li>
+            <li><b>The AIOps loop graduates</b> from triage-and-propose toward agentic, multi-step
+              analysis and gated automated fixes - earning more autonomy only as its track record
+              proves it - alongside the remaining security and AI pipelines that extend the same
+              guardrails to more of the estate.</li>
           </ul>
         </div>
       </div>
@@ -156,6 +173,14 @@
             <span class="tag">Fail closed by default</span>
             When a gate cannot confirm that proceeding is safe, it denies rather than allows. A
             false stop is preferred to a false go.
+          </div>
+          <div class="callout">
+            <span class="tag">Gated triage loop</span>
+            The newest pattern, embodied by the AIOps work: collect the signals, triage them with
+            local-first inference (escalating to a stronger model only for the hard cases, behind a
+            cost gate), and surface a proposed next step - never an automatic action. It composes
+            detect-then-approve, earned autonomy, and fail-closed into one loop that reads, reasons,
+            and proposes, but only ever acts through a human gate.
           </div>
         </div>
       </div>
