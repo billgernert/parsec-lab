@@ -40,6 +40,33 @@
     </header>
 
     <section class="category" data-accent="cyan">
+      <h2>Delivery snapshot</h2>
+      <div class="skill-body">
+        <div class="block">
+          <!-- ROADMAP:AUTO:START - generated from docs/backlog at sync time by scripts/gen-roadmap-data.py; edits between these markers are overwritten. The block below is a valid, publishable hand-written fallback. -->
+          <p class="descriptor">Delivery snapshot, generated from the backlog - as of 2026-07-13.</p>
+          <div class="count-strip">
+            <span><b>27/27</b> Tier 1 - Now, done</span>
+            <span><b>23/52</b> Tier 2 - Next, done</span>
+            <span><b>8/14</b> Tier 3 - Later, done</span>
+          </div>
+          <p class="descriptor">Recently delivered</p>
+          <ul>
+            <li>Proved disaster recovery for real: deliberately destroyed and restored the secrets store end to end, back in service in 97 seconds, with every dependent verified. <span class="when">(2026-07-12)</span></li>
+            <li>Traced a three-day silent backup outage to a certificate-pin mismatch and added an active staleness check so it can&#x27;t recur unseen. <span class="when">(2026-07-11)</span></li>
+            <li>Backup staleness now raises an active alert instead of only appearing in a report someone has to remember to read.</li>
+            <li>Standardized secret masking across every pipeline, so credentials never surface in a build log.</li>
+            <li>Documented every automation role with a README and its defaults, turning tribal knowledge into something a reader can follow.</li>
+            <li>Backup freshness now tells deleted guests apart from genuinely stale ones, so the alerts stay trustworthy.</li>
+            <li>Factored a shared pipeline library so a new pipeline is composed from vetted parts, not copy-pasted.</li>
+            <li>Dependency updates arrive as reviewed pull requests from an update bot - drift and known-vulnerable versions become changes to review, not surprises to discover.</li>
+          </ul>
+          <!-- ROADMAP:AUTO:END -->
+        </div>
+      </div>
+    </section>
+
+    <section class="category" data-accent="cyan">
       <h2>How this roadmap works</h2>
       <div class="skill-body">
         <div class="block">
