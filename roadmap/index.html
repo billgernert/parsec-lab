@@ -60,7 +60,7 @@
       <h2>Tier 1 - Now: the foundation</h2>
       <div class="skill-body">
         <div class="block">
-          <p class="descriptor">The base the rest of the platform stands on - now in place.</p>
+          <p class="descriptor">The base the rest of the platform stands on - now complete, every foundation item closed.</p>
           <ul>
             <li><b>Provisioning as a pipeline, not a checklist.</b> A request flows through
               address allocation, infrastructure-as-code, monitoring registration, configuration,
@@ -82,6 +82,11 @@
             <li><b>The public artifacts carry their own CI.</b> The published site is validated by a
               second, independent pipeline before it ships - separate from the internal one, so the
               public face has its own green checks.</li>
+            <li><b>Recovery proven, not assumed.</b> The foundation's capstone was a live
+              disaster-recovery game day: the secrets store - the platform's single most critical
+              dependency - was deliberately destroyed and restored from backup end to end, back in
+              service in 97 seconds, with every dependent system verified to recover and the findings
+              folded back into the runbook. "We back up" became "we have restored, on the clock."</li>
           </ul>
         </div>
       </div>
@@ -99,18 +104,20 @@
               provable answer instead of an assumption.</li>
             <li><b>Self-heal enhancements</b> that classify a failure, apply an OS-aware fix, and
               record every outcome so remediation is auditable.</li>
-            <li><b>A gated AIOps triage loop.</b> Overnight alerts, failed builds, and backup and
-              monitoring signals are collected into one normalized view and triaged into a single
-              morning digest: each finding classified, correlated against history, and given a
-              proposed next step. Inference runs local-first, escalating to a stronger model only
-              for the hard cases behind a cost gate; nothing acts on its own - every fix is a
-              proposal a human approves, fail-closed throughout.</li>
+            <li><b>A gated AIOps triage loop - now live end to end.</b> Overnight alerts, failed
+              builds, and backup and monitoring signals are collected into one normalized view and
+              triaged into a single morning digest: each finding classified, correlated against
+              history, its noise suppressed against the loop's own memory of what it has already
+              seen, and given a proposed next step. Inference runs local-first, escalating to a
+              stronger model only for the hard cases behind a cost gate; nothing acts on its own -
+              every fix is a proposal a human approves, fail-closed throughout.</li>
             <li><b>Reporting and digest pipelines</b> and a single-pane reports portal, so the
               platform's state is legible at a glance.</li>
-            <li><b>Recovery and trust as tested operations</b> - restore-and-reconcile pipelines, a
-              disaster-recovery game day that deliberately destroys and restores the secrets store
-              to prove the runbook rather than assume it, and certificate lifecycle extended so
-              internal services present certs issued by the lab's own certificate authority.</li>
+            <li><b>Recovery and trust as tested operations</b> - restore-and-reconcile pipelines, and
+              certificate lifecycle extended so internal services present certs issued by the lab's own
+              certificate authority. The disaster-recovery game day that anchored this line - destroy and
+              restore the secrets store to prove the runbook rather than assume it - has now run; it
+              closed out the foundation tier above, and the rest of this line is still advancing.</li>
             <li><b>An internal platform API</b> as the anchor that ties the automation surface
               together programmatically.</li>
           </ul>
