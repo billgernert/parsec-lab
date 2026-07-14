@@ -146,6 +146,22 @@
       position: relative;   /* positioning context for the footer flourish */
       overflow: hidden;     /* clip the sweep so it never adds a scrollbar (no CLS) */
     }
+    /* Site-wide legal disclaimer. Real markup (<p class="disclaimer"> inside the footer), not
+       generated content, so it is selectable and reliably exposed to assistive tech; this rule only
+       styles it. The wording is byte-identical across all pages, enforced by the CI disclaimer
+       check (scripts/check-site-disclaimer.py). This page uses inline styles, so it carries its own
+       copy of the rule. */
+    .disclaimer {
+      margin: 14px 0 0;
+      max-width: 760px;
+      font-family: var(--sans);
+      font-size: 0.7rem;
+      font-weight: 300;
+      letter-spacing: normal;
+      text-transform: none;
+      line-height: 1.6;
+      color: var(--muted);
+    }
     /* Decorative footer sweep: a thin glowing accent crosses the footer once per page load.
        Absolutely positioned + pointer-events:none, so it takes NO layout space (no CLS); the
        animation is transform (translateX) + opacity only (no width/left reflow). Disabled entirely
@@ -303,7 +319,9 @@
       </div>
     </section>
 
-    <footer>parsec-lab.com &#183; built and operated by Bill Gernert<span class="saber" aria-hidden="true"></span></footer>
+    <footer>parsec-lab.com &#183; built and operated by Bill Gernert<span class="saber" aria-hidden="true"></span>
+      <p class="disclaimer">Automation lab is a portfolio site. All content is provided as-is, without warranty of any kind, and does not constitute professional advice. Views are my own and do not represent any employer. Unauthorized use of this site or its content is prohibited. Product names and trademarks are the property of their respective owners. Copyright 2026 Bill Gernert. All rights reserved.</p>
+    </footer>
   </main>
 </body>
 </html>

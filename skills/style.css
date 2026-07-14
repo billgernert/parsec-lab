@@ -409,6 +409,22 @@ footer {
 footer a { color: var(--muted); }
 footer a:hover { color: var(--cyan); text-decoration: none; }
 
+/* Site-wide legal disclaimer. The text is real markup (a <p class="disclaimer"> inside every
+   page's <footer>) so it is selectable, in the DOM, and reliably read by assistive tech; this rule
+   only styles it. The wording is byte-identical on every page and enforced by
+   scripts/check-site-disclaimer.py (CI gate), so it cannot drift. */
+.disclaimer {
+  margin: 14px 0 0;
+  max-width: 760px;
+  font-family: var(--sans);
+  font-size: 0.7rem;
+  font-weight: 300;
+  letter-spacing: normal;
+  text-transform: none;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
 @media (max-width: 480px) {
   h1 { font-size: 1.9rem; }
   body { padding-top: 28px; }
