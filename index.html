@@ -162,10 +162,14 @@
       line-height: 1.6;
       color: var(--muted);
     }
-    /* Decorative footer sweep: a thin glowing accent crosses the footer once per page load.
-       Absolutely positioned + pointer-events:none, so it takes NO layout space (no CLS); the
-       animation is transform (translateX) + opacity only (no width/left reflow). Disabled entirely
-       under prefers-reduced-motion. Original CSS, no external assets, no artwork/logo/text. */
+    /* Decorative footer sweep: a thin glowing accent that crosses the footer. The footer sits below
+       the fold, so a one-shot animation that fired on page load finished before anyone scrolled down
+       to see it. Two trigger paths now: a scroll-driven timeline plays the sweep once as the footer
+       comes into view (Chromium, see the @supports block below); browsers without scroll-driven
+       animations fall back to the gentle loop set here, so the sweep is seen whenever the footer is
+       on screen. Absolutely positioned + pointer-events:none, so it takes NO layout space (no CLS);
+       the animation is transform (translateX) + opacity only (no width/left reflow). Disabled
+       entirely under prefers-reduced-motion. Original CSS, no external assets, no artwork/logo/text. */
     .saber {
       position: absolute;
       top: calc(50% - 1px);
@@ -178,7 +182,9 @@
       opacity: 0;
       pointer-events: none;
       transform: translateX(0);
-      animation: saber-sweep 4s ease-out 0.4s 1 both;
+      /* Fallback path (Safari / Firefox, which lack scroll-driven timelines): a gentle low-opacity
+         loop, so the sweep is visible whenever the footer is on screen, not only in the first ~2s. */
+      animation: saber-sweep 6s ease-out 2s infinite;
     }
     .saber::before {   /* a short segment leading the accent */
       content: "";
@@ -196,6 +202,20 @@
       12%  { opacity: 0.5; }
       88%  { opacity: 0.5; }
       100% { transform: translateX(120vw); opacity: 0; }
+    }
+    /* Where scroll-driven animations exist (Chromium), play the sweep exactly once as the footer
+       scrolls into view - this is the real fix for the below-the-fold one-shot that was never seen.
+       The footer must be overflow:clip here, not overflow:hidden: overflow:hidden makes the footer a
+       scroll container, and view() would then track the (non-scrolling) footer instead of the page,
+       so the sweep would never advance. overflow:clip clips the sweep identically (no scrollbar, no
+       CLS) without establishing a scroll container, so view() tracks the page scroll as intended. */
+    @supports (animation-timeline: view()) {
+      footer { overflow: clip; }
+      .saber {
+        animation: saber-sweep linear both;
+        animation-timeline: view();
+        animation-range: entry 10% cover 40%;
+      }
     }
     @media (prefers-reduced-motion: reduce) { .saber { display: none; } }
     @media (max-width: 480px) { h1 { font-size: 2rem; } body { padding-top: 40px; } }
