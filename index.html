@@ -143,7 +143,45 @@
       letter-spacing: 2px;
       color: var(--muted);
       text-transform: uppercase;
+      position: relative;   /* positioning context for the footer flourish */
+      overflow: hidden;     /* clip the sweep so it never adds a scrollbar (no CLS) */
     }
+    /* Decorative footer sweep: a thin glowing accent crosses the footer once per page load.
+       Absolutely positioned + pointer-events:none, so it takes NO layout space (no CLS); the
+       animation is transform (translateX) + opacity only (no width/left reflow). Disabled entirely
+       under prefers-reduced-motion. Original CSS, no external assets, no artwork/logo/text. */
+    .saber {
+      position: absolute;
+      top: calc(50% - 1px);
+      left: -160px;
+      width: 140px;
+      height: 2px;
+      border-radius: 2px;
+      background: linear-gradient(90deg, transparent, var(--cyan) 22%, #fff 50%, var(--cyan) 78%, transparent);
+      box-shadow: 0 0 6px var(--cyan), 0 0 12px rgba(0, 212, 255, 0.45);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(0);
+      animation: saber-sweep 4s ease-out 0.4s 1 both;
+    }
+    .saber::before {   /* a short segment leading the accent */
+      content: "";
+      position: absolute;
+      left: -10px;
+      top: -2px;
+      width: 10px;
+      height: 6px;
+      border-radius: 2px;
+      background: var(--muted);
+      box-shadow: 0 0 3px rgba(74, 96, 128, 0.8);
+    }
+    @keyframes saber-sweep {
+      0%   { transform: translateX(0);     opacity: 0; }
+      12%  { opacity: 0.5; }
+      88%  { opacity: 0.5; }
+      100% { transform: translateX(120vw); opacity: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) { .saber { display: none; } }
     @media (max-width: 480px) { h1 { font-size: 2rem; } body { padding-top: 40px; } }
   </style>
 </head>
@@ -265,7 +303,7 @@
       </div>
     </section>
 
-    <footer>parsec-lab.com &#183; built and operated by Bill Gernert</footer>
+    <footer>parsec-lab.com &#183; built and operated by Bill Gernert<span class="saber" aria-hidden="true"></span></footer>
   </main>
 </body>
 </html>
