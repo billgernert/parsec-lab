@@ -139,6 +139,9 @@
             turned away before it reaches the app rather than by the app. The public landing page you
             are reading is the deliberate exception: it is the one thing with no login in front of
             it.</p>
+          <div class="links">
+            <a href="/skills/cloudflare.html">Cloudflare Zero Trust &#8594;</a>
+          </div>
         </div>
 
         <div class="region-card" id="certs">
@@ -150,6 +153,9 @@
             that the <b>templates are the privilege boundary</b>: an over-permissive template that lets
             a low-privileged account choose its own subject is a well-known escalation path, so scoping
             them tightly is the actual work.</p>
+          <div class="links">
+            <a href="/skills/ad-cs-pki.html">AD CS and PKI &#8594;</a>
+          </div>
         </div>
 
         <div class="region-card" id="network">
@@ -160,6 +166,11 @@
             label. Segmentation is also why provisioning has a pre-flight that refuses to build into a
             segment whose network path has not been proven: a machine on an unreachable segment looks
             fine right up until you need it.</p>
+          <div class="links">
+            <a href="/skills/vlans.html">VLANs &#8594;</a>
+            <a href="/skills/opnsense.html">OPNsense &#8594;</a>
+            <a href="/skills/split-horizon-dns.html">Split-horizon DNS &#8594;</a>
+          </div>
         </div>
 
         <div class="region-card" id="compute">
@@ -169,6 +180,11 @@
             weekly pipeline rebuilds from scratch (patching a golden image is a fiction, rebuilding it
             is not), and Linux boots a shared cloud image with no golden-template dependency at all.
             Every machine is built by a pipeline, never by hand.</p>
+          <div class="links">
+            <a href="/skills/proxmox.html">Proxmox &#8594;</a>
+            <a href="/skills/terraform.html">Terraform &#8594;</a>
+            <a href="/skills/pipelines.html">Pipelines &#8594;</a>
+          </div>
         </div>
 
         <div class="region-card" id="kubernetes">
@@ -177,6 +193,10 @@
             runs, which is the part people usually leave out of a homelab picture. CI, GitOps
             reconciliation, image builds, dependency updates, the AI gateway, and the metrics stack are
             all workloads here, not pets on a VM somewhere.</p>
+          <div class="links">
+            <a href="/skills/kubernetes-k3s.html">Kubernetes (K3s) &#8594;</a>
+            <a href="/skills/helm.html">Helm &#8594;</a>
+          </div>
         </div>
 
         <div class="region-card" id="cicd">
@@ -187,6 +207,13 @@
             in production. Images are built in-cluster rather than on somebody's laptop, dependency
             bumps arrive as PRs, and a reconciler continuously drags the cluster back to what git says
             it should be. Drift has nowhere to live.</p>
+          <div class="links">
+            <a href="/skills/jenkins.html">Jenkins &#8594;</a>
+            <a href="/skills/gitea.html">Gitea &#8594;</a>
+            <a href="/skills/argo-cd.html">Argo CD &#8594;</a>
+            <a href="/skills/kaniko.html">Kaniko &#8594;</a>
+            <a href="/skills/devsecops.html">DevSecOps &#8594;</a>
+          </div>
         </div>
 
         <div class="region-card" id="secrets">
@@ -196,6 +223,9 @@
             carrying a password around. Two independent scanners backstop the rule, one at commit time
             and one at write time, so a secret has to beat both to reach the repository. This tier is
             also the one whose recovery I proved by destroying it outright and restoring it.</p>
+          <div class="links">
+            <a href="/skills/vault.html">Vault &#8594;</a>
+          </div>
         </div>
 
         <div class="region-card" id="ipam">
@@ -204,6 +234,9 @@
             spreadsheet or a memory. That is what makes an automated build safe to run twice: the
             address is allocated, recorded, and released again by the same pipeline that created it,
             and released only once the machine it belonged to is genuinely gone.</p>
+          <div class="links">
+            <a href="/skills/netbox-ipam.html">NetBox IPAM &#8594;</a>
+          </div>
         </div>
 
         <div class="region-card" id="monitoring">
@@ -214,6 +247,11 @@
             UI has nowhere to hide. The overview screen is generated from the dashboards themselves and
             refuses to build if one is missing its domain tag. A tile with no signal renders grey, never
             green, because a green light meaning "I have no idea" is worse than no light.</p>
+          <div class="links">
+            <a href="/skills/zabbix.html">Zabbix &#8594;</a>
+            <a href="/skills/prometheus.html">Prometheus &#8594;</a>
+            <a href="/skills/grafana.html">Grafana &#8594;</a>
+          </div>
         </div>
 
         <div class="region-card" id="ai">
@@ -223,6 +261,9 @@
             fronts them so calls are routed, keyed, and metered in one place. Spend is governed by
             layered budgets where any layer can say no, and the innermost one fails closed: a budget
             that is missing or unreadable denies rather than allows.</p>
+          <div class="links">
+            <a href="/ai/">How I use AI &#8594;</a>
+          </div>
         </div>
 
         <div class="region-card" id="identity">
@@ -232,6 +273,11 @@
             the cloud and the next sync quietly overwrites it from on-prem, with no error, so the rule
             is to change it where the authority is. Joiners and leavers are pipelines driven by
             declarative role definitions, and offboarding disables rather than deletes.</p>
+          <div class="links">
+            <a href="/skills/active-directory.html">Active Directory &#8594;</a>
+            <a href="/skills/entra-id.html">Entra ID &#8594;</a>
+            <a href="/skills/duo-mfa.html">Duo MFA &#8594;</a>
+          </div>
         </div>
 
         <div class="region-card" id="backup">
