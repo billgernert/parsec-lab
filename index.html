@@ -62,6 +62,10 @@
       margin-bottom: 22px;
     }
     .lede { font-size: 1.1rem; color: var(--fg); font-weight: 300; }
+    .hero { max-width: 680px; }
+    .hero .lede { margin-bottom: 6px; }
+    .hero p { font-size: 1.02rem; }
+    .hero-fact { color: var(--cyan); font-weight: 700; font-variant-numeric: tabular-nums; }
 
     h2 {
       font-family: var(--mono);
@@ -298,11 +302,41 @@
 
       <h1>Bill Gernert</h1>
       <p class="tagline">Platform &amp; infrastructure automation</p>
-      <p class="lede">
-        I build the kind of automation that runs a data center: provisioning, GitOps, monitoring,
-        self-healing, identity, and secrets - wired together end to end and treated as production.
-        The proof is a lab I run and operate as if it were a real platform.
-      </p>
+      <div class="hero">
+        <p class="lede">
+          I build the kind of automation that runs a data center: provisioning, GitOps, monitoring,
+          self-healing, identity, and secrets, wired together end to end and treated as production.
+          The proof is a lab I run and operate as if it were a real platform, across Linux and Windows.
+        </p>
+        <p>
+          Fifteen-plus years of system administration and infrastructure design, applied to a greenfield
+          build I got to design the way I thought it should be built. Here's the honest part: I read and
+          edit code fluently, but I don't hold syntax in my head when writing from scratch, and I stopped
+          pretending that matters. What I'm good at is planning.
+        </p>
+        <p>
+          The scale tells the story:
+          <!-- Generated facts (item 136 / item 94). The item count is injected by
+               scripts/gen-roadmap-data.py --hero-page; the PR count by scripts/gen-pr-count.py (Gitea
+               merged-PR API). Edits between each START/END marker are overwritten at sync; the values
+               committed here are the last generated snapshot, not hand-typed literals. -->
+          <b class="hero-fact"><!--HERO:ITEMS:START-->83<!--HERO:ITEMS:END--></b> backlog items delivered
+          through <b class="hero-fact"><!--HERO:PRS:START-->497<!--HERO:PRS:END--></b> PRs, built with four
+          parallel Claude Code sessions held to a rigid process. I reviewed and approved every one.
+          Automation is only as good as its sources of truth, so NetBox owns every IP, Vault owns every
+          secret, git owns every definition, and drift has nowhere to live. Recovery is proven, not
+          promised: Vault destroyed and restored live in 97 seconds.
+        </p>
+        <p>
+          And AI isn't just how I built the lab, it's part of operations. A local LLM and the Claude API
+          work as agents inside the platform: triaging alerts each morning, analyzing incidents, and
+          reporting on the health of the lab, all cost-gated and audited like everything else.
+        </p>
+        <p class="note">
+          Click around to see what I've built, how and why it works, how I prevent drift, and how it's
+          secured and visualized.
+        </p>
+      </div>
     </header>
 
     <section>
