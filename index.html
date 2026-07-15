@@ -250,6 +250,7 @@
     <nav class="topnav" aria-label="Primary">
       <a href="/" class="active" aria-current="page">Home</a>
       <a href="/projects/">Projects</a>
+      <a href="/platform/">Platform</a>
       <a href="/skills/">Skills</a>
       <a href="/ai/">AI</a>
       <a href="/roadmap/">Roadmap</a>
@@ -322,8 +323,8 @@
                scripts/gen-roadmap-data.py --hero-page; the PR count by scripts/gen-pr-count.py (Gitea
                merged-PR API). Edits between each START/END marker are overwritten at sync; the values
                committed here are the last generated snapshot, not hand-typed literals. -->
-          <b class="hero-fact"><!--HERO:ITEMS:START-->86<!--HERO:ITEMS:END--></b> backlog items delivered
-          through <b class="hero-fact"><!--HERO:PRS:START-->528<!--HERO:PRS:END--></b> PRs, built with four
+          <b class="hero-fact"><!--HERO:ITEMS:START-->87<!--HERO:ITEMS:END--></b> backlog items delivered
+          through <b class="hero-fact"><!--HERO:PRS:START-->536<!--HERO:PRS:END--></b> PRs, built with four
           parallel Claude Code sessions held to a rigid process. I reviewed and approved every one.
           Automation is only as good as its sources of truth, so NetBox owns every IP, Vault owns every
           secret, git owns every definition, and drift has nowhere to live. Recovery is proven, not
@@ -374,14 +375,27 @@
     <section>
       <h2>Projects</h2>
       <p>
-        Six subsystems, each built and operated as if it were production: provisioning as a pipeline with
-        roll-forward semantics, a self-healing platform that records what it actually observed, identity
-        automation from first day to last, AIOps triage that fails closed, observability where a tile with
-        no signal is never green, and a secrets tier whose recovery I proved by destroying it. Each writeup
-        names the limits too.
+        Six pipelines, told as stories: automated server provisioning across Windows and Linux, a template
+        factory that rebuilds golden images instead of patching them, a job reporting pipeline, self-healing
+        monitoring, a decommission that refuses to run when its plan would destroy nothing, and an AIOps
+        morning triage that is cost-gated twice over. Each one gets the problem, the stages, the code, and
+        <b>what broke</b> - including the gate that spent its whole life reading the wrong exit code.
       </p>
       <div class="links">
-        <a href="/projects/">See the projects &#8594;</a>
+        <a href="/projects/">Read the pipeline stories &#8594;</a>
+      </div>
+    </section>
+
+    <section>
+      <h2>Platform</h2>
+      <p>
+        The subsystems those pipelines run on: provisioning with roll-forward semantics, a self-healing
+        engine that records only what it can actually observe, identity automation from first day to last,
+        AIOps triage that fails closed, observability where a tile with no signal is never green, and a
+        secrets tier whose recovery I proved by destroying it. Each writeup names the limits too.
+      </p>
+      <div class="links">
+        <a href="/platform/">How the platform works &#8594;</a>
       </div>
     </section>
 

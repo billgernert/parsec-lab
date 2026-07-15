@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Projects - Bill Gernert</title>
-  <meta name="description" content="The major projects inside AutomationLab: provisioning as a pipeline, a self-healing platform, identity lifecycle automation, AIOps, observability and the NOC, and secrets with a proven recovery.">
+  <meta name="description" content="Six pipelines from AutomationLab, told as stories: automated server provisioning, a Windows template factory, a job reporting pipeline, self-healing monitoring, VM decommission with safety gates, and AIOps morning triage. Each with the problem, the stages, what broke, and the code that fixed it.">
   <meta name="color-scheme" content="dark">
   <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Crect%20width%3D%27100%27%20height%3D%27100%27%20fill%3D%27%230a0e1a%27%2F%3E%3Cpolygon%20points%3D%2750%2C14%2081%2C32%2081%2C68%2050%2C86%2019%2C68%2019%2C32%27%20fill%3D%27none%27%20stroke%3D%27%2300d4ff%27%20stroke-width%3D%275%27%2F%3E%3Ccircle%20cx%3D%2750%27%20cy%3D%2750%27%20r%3D%279%27%20fill%3D%27%2300ff96%27%2F%3E%3C%2Fsvg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,6 +17,7 @@
     <nav class="topnav" aria-label="Primary">
       <a href="/">Home</a>
       <a href="/projects/" class="active" aria-current="page">Projects</a>
+      <a href="/platform/">Platform</a>
       <a href="/skills/">Skills</a>
       <a href="/ai/">AI</a>
       <a href="/roadmap/">Roadmap</a>
@@ -31,161 +32,356 @@
     </nav>
 
     <header class="skill-head">
-      <span class="badge">What I built</span>
+      <span class="badge">Pipelines</span>
       <h1>Projects</h1>
-      <p class="descriptor">Six things I built inside AutomationLab, each a real subsystem rather than a
-        demo: what it does, how it works, and where I drew the line on what it is allowed to do by
-        itself. Where a design has a limit, it is named here rather than rounded up.</p>
+      <p class="descriptor">Six pipelines I built and run. Each one gets the same treatment: the problem
+        it exists to solve, the stages it actually runs, <b>what broke and what I did about it</b>, and
+        the code that fixed it. The bugs are the interesting part, so they are not skipped. For the
+        subsystems these run on, see <a href="/platform/">Platform</a>.</p>
     </header>
 
     <div class="skill-body">
       <section class="block">
-        <h2>Provisioning is a pipeline, not a checklist</h2>
-        <p>A request for a VM becomes a single pipeline run. Before anything is allocated, a collision
-          check asks every system that could already know the name, and an unreachable system counts as
-          a collision rather than a silent all-clear. Then an address is allocated from the IPAM system
-          of record, a node is chosen, and a plan is built in that machine's own infrastructure-as-code
-          workspace. A human approves the plan, it applies, the host is registered for monitoring with a
-          unique per-host key minted straight into the secrets manager, and only then does configuration
-          management run, so the agent is trusted before it ever starts.</p>
-        <p><b>Failure is roll-forward, not rollback.</b> The apply is the boundary: fail before it and
-          the reserved address is released, so nothing is orphaned; fail after it and the machine is
-          kept, because re-running the same request continues from where it stopped. A live VM never
-          gets rolled back underneath itself. Decommission reverses the build in the safe order,
-          releasing the address only once the machine is actually gone.</p>
-        <p>Both Linux and Windows are first-class, and they differ where it matters: Windows clones a
-          template built as code by its own image pipeline, while Linux boots a shared cloud image with
-          no golden-template dependency. Each VM getting its own state workspace is the point: a bad
-          apply is scoped to one machine instead of the fleet.</p>
+        <h2>1. Automated server provisioning</h2>
+        <p><b>The problem.</b> A server is a fact recorded in five places at once: the address in IPAM,
+          the machine on the hypervisor, the host in monitoring, the resource in infrastructure state,
+          and the entry in configuration inventory. Build one by hand and any of those can silently
+          disagree, or worse, silently agree with a machine that already exists. The failure this
+          pipeline is built against is the one everybody has seen: <b>a new host quietly reconciles a
+          live one</b> because nothing checked every system that already knew the name.</p>
+        <ol class="stages">
+          <li>Validate input</li>
+          <li><b>Reachability pre-flight</b> - refuse a target whose network path is untested</li>
+          <li><b>Name collision check</b> - ask every system that could already know the name</li>
+          <li>Allocate an address from IPAM</li>
+          <li>Select a node by live free memory</li>
+          <li>Plan, in this machine's own infrastructure-state workspace</li>
+          <li><b>Human approval</b> (60-minute timeout)</li>
+          <li>Apply - <b>the roll-forward boundary</b></li>
+          <li>Register monitoring, minting a unique per-host key into the secrets manager</li>
+          <li>Configure with Ansible (the agent is already trusted)</li>
+          <li>Register DNS</li>
+          <li>Commit the host manifest</li>
+        </ol>
+        <p>Windows runs the same backbone and diverges where it must: it mints a per-host local-admin
+          password into the secrets manager, resolves a template by tag rather than booting a cloud
+          image, and waits for WinRM to be <em>stably</em> up (six consecutive good checks) because
+          first-boot init flaps the port and a single successful probe is a lie.</p>
+        <p><b>What broke, three times, and what I did about it.</b></p>
+        <p><b>One: the gate could not see.</b> The collision check asked IPAM for devices and virtual
+          machines. But a host provisioned by this pipeline is recorded in IPAM as <em>an address with a
+          DNS name</em>, not as a device object. So the query came back empty, the API was perfectly
+          healthy, and the gate said "no collision" about a host that was already alive. Fixed by also
+          querying the address records, and by adding a deterministic scan of the configuration
+          inventory: reading a file beats guessing from a naming convention.</p>
+        <p><b>Two: the gate could see, and nobody was listening.</b> This one is my favourite. The
+          detector correctly found the collision, printed it, and exited non-zero. The pipeline
+          proceeded anyway. The stage ran the checker piped into <code>tee</code> so the report could be
+          saved, and <b>a shell pipeline exits with the status of its last command</b>. That was
+          <code>tee</code>, which always succeeds. The gate had been reading <code>tee</code>'s exit code
+          the entire time it existed. Fixed by redirecting instead of piping, and by adding a fail-safe
+          so an unset or unparseable exit code can never read as clean. The same bug was sitting in the
+          reachability pre-flight; it went in the same pass.</p>
+        <pre class="excerpt"><code>script {
+    def rc = (env.COLLISION_RC ?: '').trim()
+    if (!rc.isInteger()) {
+        // Fail-safe: an unset/unparseable exit code must NEVER read as clean. Gate-or-fail.
+        error("Name collision check produced no usable exit code (COLLISION_RC='${rc}'); refusing to proceed ungated.")
+    }
+    if (rc != '0') {
+        // 2 = confirmed collision; 3 = unverifiable (fail-loud). Both gate; wording differs.
+        def collision = rc == '2'</code></pre>
+        <p class="excerpt-cap">The fix for bug two, and the fail-safe it taught me to add.</p>
+        <p><b>Three: rejecting the plan leaked the address.</b> Reject the approval and the reserved
+          address stayed reserved. The release ran in the pipeline's <em>failure</em> handler, but a
+          rejected approval does not fail a build, it <b>aborts</b> it. Fixed by moving the release to
+          the handler that covers failed, aborted, and unstable alike, still guarded so that a machine
+          which already exists keeps its address rather than having it yanked out from under it.</p>
+        <p>Underneath all three is one rule, and it is the part worth stealing: <b>an unreachable system
+          is never "clean"</b>. If a system that could hold a conflicting name cannot be reached, that is
+          not a pass, it is an unknown, and an unknown still stops the build.</p>
+        <pre class="excerpt"><code>def evaluate(hits):
+    """Pure verdict over the gathered hits. 'collision' &gt; 'error' &gt; 'clean'."""
+    if any(h["present"] is True for h in hits):
+        return "collision"
+    if any(h["present"] is None for h in hits):
+        return "error"
+    return "clean"
+
+
+EXIT = {"clean": 0, "collision": 2, "error": 3}</code></pre>
+        <p class="excerpt-cap">Present means collision. Unknown means error. Only proven-absent is clean.</p>
         <div class="links">
           <a href="/skills/terraform.html">Terraform &#8594;</a>
           <a href="/skills/netbox-ipam.html">NetBox IPAM &#8594;</a>
+          <a href="/skills/jenkins.html">Jenkins &#8594;</a>
           <a href="/skills/ansible.html">Ansible &#8594;</a>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>2. The template factory</h2>
+        <p><b>The problem.</b> Hand-built golden images rot. They accumulate cruft you cannot see and
+          cannot clean: activation timers that cannot be re-armed again, locked packages, drifted
+          certificates. And you cannot really <em>patch</em> a golden image, you can only add to it. The
+          fix is to stop treating the image as an artifact you maintain and start treating it as an
+          output you regenerate: <b>patching a template means rebuilding it</b>, and the build is code.</p>
+        <ol class="stages">
+          <li>Stage - pick the idle half of a live/alternate template pair</li>
+          <li>Build - Packer, from a custom answer-file ISO</li>
+          <li><b>Verify</b> - confirm the thing built is genuinely a template</li>
+          <li><b>Promote</b> - tag-swap the new one live, demote the old one</li>
+          <li>Cleanup on failure - destroy the staging machine, leave the live tag untouched</li>
+          <li>Email the result</li>
+        </ol>
+        <p>It runs weekly, unattended. Two details carry it. First, <b>the build verifies itself</b>
+          rather than trusting an exit code: it re-reads the machine's config and checks it really is a
+          template, because a stale template left by a previous run must never be misread as this run's
+          success. Second, provisioning never names a template by ID, only by tag, which is what makes
+          the swap invisible to it.</p>
+        <p><b>The promote order is the whole trick.</b> Promote the new one to live <em>first</em>, then
+          demote the old one. Do it the other way and a failure between the two steps leaves zero live
+          templates and provisioning is down. This way the worst case is two templates both tagged live,
+          the resolver picks one, and everything keeps working.</p>
+        <pre class="excerpt"><code>def cmd_promote(osname, staging):
+    p = PAIRS[osname]; tag = p["tag"]; staging = int(staging)
+    if not _is_template(staging):
+        sys.stderr.write(f"refusing: staging {staging} is not a template\n"); sys.exit(1)
+    old_live = _find_by_tag(tag)
+    # Promote staging to live FIRST. If anything fails after this, we have two live
+    # templates (resolver picks one - still works) rather than zero (provisioning down).
+    node = _node_of(staging)
+    _api(f"/nodes/{node}/qemu/{staging}/config", "PUT",
+         {"tags": f"win-template;{tag}"})</code></pre>
+        <p class="excerpt-cap">Fail toward two live templates, never toward none.</p>
+        <p><b>What broke: it was finished, and it was not there.</b> This subsystem worked. It had been
+          built, it had run, and the roadmap said "completed". It was also sitting on a branch, more than
+          a hundred and fifty commits behind, <b>entirely absent from the main line</b>, for months.
+          Nobody noticed because everything that consumed it kept working off the old templates. A branch
+          audit found it, and it merged across almost verbatim, needing only four modernizations to meet
+          the standards the main line had since grown. Then a live build ran green from the merged code
+          and the branch was deleted. The lesson was not about Packer: <b>work that is not merged is not
+          done, no matter what the board says.</b></p>
+        <div class="links">
+          <a href="/skills/pipelines.html">Pipelines &#8594;</a>
           <a href="/skills/proxmox.html">Proxmox &#8594;</a>
         </div>
       </section>
 
       <section class="block">
-        <h2>A platform that heals itself, and says so</h2>
-        <p>Monitoring does not just alert, it repairs. An engine reads each failure and classifies it,
-          then splits the work: drift it can correct at the server, such as a moved address or a stale
-          key, it fixes directly, and anything needing a touch on the host itself is queued as a plan.
-          That plan is emailed in full and waits on a human approval gate; unapproved, it times out and
-          not one host is touched. Dispatch is OS-aware, taking a different route to Linux and to
-          Windows, and deliberately running only the roles that repair monitoring, never the
-          provisioning roles that would be destructive on a live host.</p>
-        <p><b>The audit trail is honest about its own limits.</b> Every run records an outcome per host,
-          and the vocabulary is exactly what the engine can actually observe: applied, dispatched, or
-          escalated. It does not claim a heal went green, because it does not yet watch the host
-          afterwards, and inventing that verdict would make the record a liability. One narrow case runs
-          with no human in the loop at all, restarting a single stateless service: it is fenced by a
-          maintenance-window guard, a hard two-attempt cap so it can never loop, and an allowlist on the
-          host permitting exactly one command and nothing else.</p>
+        <h2>3. The job reporting pipeline</h2>
+        <p><b>The problem</b>, in the words I wrote when I filed it: job searching is manual,
+          unstructured, and produces no data. Postings get found ad hoc, fit is judged subjectively,
+          market signal is invisible, and there is no record of which version of a resume went where. So
+          I built the thing I would have built at work: ingest, enrich, score, report, and measure
+          whether the scoring was any good.</p>
+        <ol class="stages">
+          <li>Collect (daily) - job boards, aggregators, and a forwarding mailbox, deduped on a URL hash</li>
+          <li>Enrich (daily) - a <b>local</b> model extracts skills and a 0-10 relevance score</li>
+          <li><b>Prefilter</b> - anything scoring low is dropped <em>before</em> a single paid call</li>
+          <li>Parse salary and deadline deterministically (regex, not a model)</li>
+          <li>Fit-score the survivors with a paid model, behind a fail-closed budget gate</li>
+          <li>A human decides - a state machine; choosing "want" triggers resume tailoring</li>
+          <li>Digest (daily) - quiet by default</li>
+          <li>Calibrate (weekly) - pure SQL, no model</li>
+        </ol>
+        <p>The routing rule is cheapest-first and it is not a slogan: the free local model reads
+          <em>every</em> posting, the paid model only ever sees what survived it. The digest is quiet by
+          default, which makes its arrival the heartbeat: nothing to report means no email, so an empty
+          inbox is a signal rather than a silence.</p>
+        <p>The most interesting code in this pipeline is not code. Tailoring a resume with a model is
+          exactly where a system starts lying on your behalf, so the constraint is written as the
+          hardest thing in the prompt:</p>
+        <pre class="excerpt"><code>HARD CONSTRAINT - truthfulness (non-negotiable):
+- You MAY reframe wording, reorder sections and bullets, and OMIT anything in the master
+  resume that is irrelevant to this posting.
+- You MUST NOT add, invent, or imply any employer, job title, employment date, degree,
+  certification, metric, or skill that is not already present in the master resume. If the
+  posting asks for something the resume does not already evidence, leave it out; do not
+  fabricate it. When in doubt, omit rather than invent.
+- The KNOWN GAPS listed in the user message are context for what to de-emphasize. They are
+  NOT a license to add missing qualifications. Never write experience to fill a gap.</code></pre>
+        <p class="excerpt-cap">Reframe freely. Never invent. The gaps are not a licence to fill them.</p>
+        <p><b>What broke.</b> Three good ones. <b>A hundred and forty files, one database row:</b> the
+          dedupe hash normalized each URL by stripping its query string, which is right for tracking
+          parameters and catastrophically wrong for a source whose posting identity <em>is</em> the query
+          string. Every posting from it collapsed onto a single row, and every run cheerfully re-queued
+          the same work. Fixed with a per-source flag rather than by weakening the rule for everyone.
+          <b>A parser that ate the first letter of every path:</b> the status output was trimmed as a
+          whole, which swallowed the leading column space on the first line only, and then each line was
+          cut at a fixed offset, so the first path lost its first character and the job went looking for
+          a directory one letter short of the real one. <b>A retry with no cap:</b> a posting that
+          consistently failed to score was caught, logged, skipped, and retried again the next run, and
+          the next, forever, burning a budget check each time and hiding the real bug behind a tidy log
+          line. It now counts its attempts, gives up after three, and says so.</p>
+        <p class="note">Honest about the ending: the calibration machinery is built and tested, but it
+          has not yet had enough real outcomes to judge whether the scores predict anything. It measures
+          nothing until it does, and it will not pretend otherwise. The pipeline also never applies to
+          anything on my behalf: it prepares, a human sends.</p>
+        <div class="links">
+          <a href="/skills/job-search-platform.html">The job search platform &#8594;</a>
+          <a href="/skills/python-tooling.html">Python tooling &#8594;</a>
+          <a href="/ai/">How I use AI &#8594;</a>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>4. Self-healing monitoring</h2>
+        <p><b>The problem.</b> Monitoring that wakes you up to perform the same restart is not
+          monitoring, it is a pager with extra steps. But a system that repairs things unattended is a
+          system that can break things unattended, at machine speed, across a fleet. So the question is
+          not "can it fix this", it is <b>"what is it allowed to do without me"</b>.</p>
+        <ol class="stages">
+          <li>Detect - classify every broken host. Changes nothing</li>
+          <li>Email the <b>full plan</b></li>
+          <li><b>Human approval</b> (30-minute timeout; unapproved means zero hosts touched)</li>
+          <li>Heal Linux</li>
+          <li>Heal Windows</li>
+        </ol>
+        <p>The engine splits the work by what it can safely own. Drift it can correct at the server (an
+          address that moved, a key that went stale) it fixes directly. Anything needing a touch on the
+          host itself is queued as a plan for a human to approve. Dispatch is OS-aware, and it runs
+          <em>only</em> the roles that repair monitoring, never the provisioning roles that would be
+          destructive on a machine that is already live and serving.</p>
+        <p><b>The vocabulary is the honesty.</b> Every run records an outcome per host, and the words it
+          is allowed to use are exactly the words it can prove:</p>
+        <pre class="excerpt"><code>result vocabulary for this engine (Level 1, classify/dispatch only):
+  applied    - server-side fix made here (ip-fix / psk-sync)
+  dispatched - agent-side heal queued to Ansible (outcome verified later)
+  escalated  - no automation path (unknown OS), needs a human
+green_within_n / failed are NOT recordable here: this engine does not
+re-check the host after healing. That belongs to the post-heal verification
+slice (re-query Zabbix availability after the Ansible stages).</code></pre>
+        <p class="excerpt-cap">It cannot say the heal worked, because it does not look. So it does not say it.</p>
+        <p><b>What broke.</b> Per-host monitoring keys live in the secrets manager under two different
+          schemas, for historical reasons. An earlier version of the engine read only one of them. Every
+          host stored under the other schema was silently skipped: not errored, not warned, skipped. And
+          because nothing had failed, <b>the pipeline reported success while those hosts stayed
+          red</b>. That is the worst possible outcome for a self-healing system, worse than not running
+          at all, because a green run is a claim that the fleet is fine. It reads both schemas now.</p>
         <div class="links">
           <a href="/skills/zabbix.html">Zabbix &#8594;</a>
           <a href="/skills/ansible.html">Ansible &#8594;</a>
+          <a href="/platform/">The platform &#8594;</a>
         </div>
       </section>
 
       <section class="block">
-        <h2>Identity, from first day to last</h2>
-        <p>Joiners and leavers are pipelines, driven by declarative role definitions rather than
-          per-person judgement: a role maps to its groups, its mail lists, and its app assignments. On
-          the way in, an account is created in the authoritative on-prem directory, then the cloud side
-          waits out directory-sync latency before assigning cloud groups and single-sign-on tiles.
-          Temporary credentials are minted with a short time-to-live and one-time use.</p>
-        <p><b>On the way out, nothing is deleted.</b> Offboarding disables first: strip the groups,
-          datestamp the record, move the object aside, and commit a machine-readable snapshot of the
-          account <em>before</em> the first group comes off, so a wrong offboard is a restore rather than
-          an incident. Deletion happens only after a 30-day grace period, and only for accounts with a
-          clean paper trail. An account that someone re-enabled, or one that arrived outside the
-          pipeline, is flagged as an anomaly and left alone: the sweep only removes what it can
-          explain.</p>
-        <p><b>The best story here is a bug I found in my own control.</b> Deprovisioning is gated by
-          two-person approval, restricted to an admin allowlist, and the requester cannot approve their
-          own request. An audit of that gate found it fail-<em>open</em>: when the requester was blank,
-          which happens on API, timer, and replay-triggered runs, the identity check short-circuited and
-          a single actor could approve their own offboard. It now hard-fails on a blank requester, so
-          every path reaches the gate with a name attached. A control nobody audits is a control nobody
-          has.</p>
+        <h2>5. Decommission, with the gate that says no</h2>
+        <p><b>The problem.</b> Destroying is the one operation you cannot walk back. The machine's name
+          doubles as the selector for its infrastructure-state workspace, which means a typo is not a
+          typo, it is a target. A name matching nothing fails safely and loudly. But a name that happens
+          to match an <em>existing</em> workspace that is empty or wrong does not fail at all, and that
+          is the gap.</p>
+        <ol class="stages">
+          <li>Validate input</li>
+          <li>Plan the destroy</li>
+          <li><b>Assert the plan actually destroys something</b></li>
+          <li>Human approval (30-minute timeout)</li>
+          <li>Destroy</li>
+          <li>Release the address - <b>after</b> the destroy, never before</li>
+          <li>Deregister monitoring</li>
+          <li>Deregister DNS</li>
+          <li>Remove the host manifest, delete the workspace</li>
+        </ol>
+        <p><b>What broke, and it is the one that bothers me most.</b> A destroy plan that destroys
+          nothing is not an error. It plans zero changes and exits zero. The apply then applies zero
+          changes and exits zero. The pipeline emails <em>"VM Decommissioned"</em>. Nothing anywhere had
+          ever asserted that the plan would delete a single thing, because why would a destroy not
+          destroy?</p>
+        <p>That alone is a lie in an email. What makes it dangerous is the next two stages: deregistering
+          monitoring and DNS keys off <em>the name</em>, not off a confirmed destroy. So a name that
+          matched some abandoned workspace could tear a live host out of monitoring and DNS while
+          destroying nothing and reporting success. And there were more than a dozen junk workspaces
+          lying around from ad-hoc runs, which is exactly what makes an accidental match plausible rather
+          than theoretical.</p>
+        <p><b>The fix asserts the plan's contents, not its exit code.</b> It reads the planned changes
+          and looks for an actual delete. Nothing to destroy is exit 2. An unreadable plan is exit 3, and
+          also fails, because a plan you cannot read is not a plan you may act on. It deliberately does
+          not use the tool's own "detailed exit code" flag, which has a documented history of reporting
+          changes when there is nothing to destroy. Best of all it runs <b>before</b> the approval, so a
+          plan that would do nothing never reaches a human to rubber-stamp.</p>
+        <pre class="excerpt"><code>if not deleted:
+    print("DESTROY PLAN IS EMPTY: it would destroy 0 resources.", file=sys.stderr)
+    print("", file=sys.stderr)
+    print("A decommission that destroys nothing is a FALSE NEGATIVE, not a success (item 130).",
+          file=sys.stderr)
+    print("The plan was built against a workspace whose state has nothing to destroy. Likely:",
+          file=sys.stderr)
+    print("  - the VM was already destroyed (this decommission has nothing to do), or",
+          file=sys.stderr)
+    print("  - the wrong workspace was selected, or its state is empty/lost.", file=sys.stderr)
+    return EXIT_NOTHING_TO_DESTROY</code></pre>
+        <p class="excerpt-cap">An empty destroy plan is a false negative, not a success.</p>
+        <p class="note">Honest about the state of it: this gate is committed and proven against synthetic
+          plans covering every exit path, but it has not yet been re-run live against the two real
+          false negatives that prompted it, so I am not calling it verified. It currently guards the
+          Linux pipeline; the Windows one still carries the older pattern and is next.</p>
         <div class="links">
-          <a href="/skills/active-directory.html">Active Directory &#8594;</a>
-          <a href="/skills/entra-id.html">Entra ID &#8594;</a>
-          <a href="/skills/ad-cs-pki.html">AD CS and PKI &#8594;</a>
+          <a href="/skills/terraform.html">Terraform &#8594;</a>
+          <a href="/skills/jenkins.html">Jenkins &#8594;</a>
         </div>
       </section>
 
       <section class="block">
-        <h2>AIOps: triage that earns its place</h2>
-        <p>Collectors sweep monitoring, metrics, CI, and backups into one findings table, each run
-          leaving a heartbeat so a quiet night is distinguishable from a broken collector. A local model
-          classifies each finding, correlation is done deterministically in code rather than asked of
-          the model, and a short digest lands before the day starts, carrying a health banner so a
-          degraded run is visibly red instead of silently empty. When something fires, an analyzer
-          returns a probable cause and a single suggested first check, inline with the alert.</p>
-        <p><b>Scanner triage fails closed.</b> Vulnerability and secret-scanner output is sorted into
-          exploitable-in-context versus likely-noise, but only a valid noise verdict may ever downgrade
-          a finding: if the model is down, times out, or answers with nonsense, the finding stays real.
-          Secret values are dropped before the model sees them at all. Untrusted text is fenced and
-          treated as data, and there is no path from model output to execution: the output becomes a
-          row, an email, or an issue, never a command. Every verdict is a database row rather than a log
-          line, and the boundary between proposing and doing is hard.</p>
+        <h2>6. AIOps morning triage</h2>
+        <p><b>The problem.</b> Overnight, the estate produces alerts, CI results, and backup outcomes.
+          By morning that is a pile. The pile is not the problem; the problem is that reading it is a
+          job, and the day already has one. So: collect it, have something read it, and put a short
+          honest summary in front of me before I sit down.</p>
+        <ol class="stages">
+          <li>Collect from alerting, monitoring, CI, and backups (each writes a <b>heartbeat</b>)</li>
+          <li>Correlate - deterministically, in code, not asked of a model</li>
+          <li>Triage - a <b>local</b> model classifies each finding</li>
+          <li><b>Escalate the hard cases only</b> - a paid model, twice-braked</li>
+          <li>Digest - with a health banner</li>
+        </ol>
+        <p>It runs daily at 06:00, after the backups and before me. The heartbeat matters more than it
+          sounds: without it, a collector that never ran and a night with nothing wrong produce the same
+          empty page. A quiet night has to be provably quiet.</p>
+        <p><b>Cost gating is two independent brakes</b>, because one is a single point of failure. A
+          fail-closed budget gate that denies when the budget is <em>missing or unreadable</em>, not just
+          when it is exceeded, so a broken secret closes the tap instead of opening it. And a per-run
+          escalation cap on top, which the code calls belt-and-suspenders over the money gate, in as many
+          words:</p>
+        <pre class="excerpt"><code>def should_escalate(local, finding, gate_allowed, escalations_left,
+                    conf_threshold=ESCALATE_CONFIDENCE):
+    """Decide whether to send this finding to Claude. Returns (escalate: bool, reason: str).
+
+    Never escalates unless the credit gate allows AND a per-run cap remains (belt-and-suspenders
+    over the money gate). Given that, escalate a HARD case:
+      - local is None (the local model produced unusable output), or
+      - local confidence is below threshold (or missing), or
+      - high-stakes: severity critical AND locally classified actionable (warrants a 2nd opinion).
+    """
+    if not gate_allowed or escalations_left &lt;= 0:
+        return False, "gate-blocked" if not gate_allowed else "per-run cap reached"
+    if local is None:
+        return True, "local output invalid"
+    _cls, _rat, conf = local
+    if conf is None or conf &lt; conf_threshold:
+        return True, f"low local confidence ({conf})"</code></pre>
+        <p class="excerpt-cap">The paid model is for hard cases: bad local output, low confidence, or high stakes.</p>
+        <p><b>The one stage allowed to fail the build is the digest.</b> Collectors and triage soft-fail
+          and let the chain continue, because a broken collector should not cost me the whole report. But
+          if the digest cannot send, the build fails loudly, because a report that silently stops
+          arriving looks exactly like a quiet morning. The absence of news has to be news.</p>
         <div class="links">
           <a href="/ai/">How I use AI &#8594;</a>
-          <a href="/skills/devsecops.html">DevSecOps &#8594;</a>
-        </div>
-      </section>
-
-      <section class="block">
-        <h2>Observability, and one screen to start from</h2>
-        <p>Three tools with distinct jobs: agent-based monitoring for the traditional fleet, Prometheus
-          for the Kubernetes and virtualization estate, and Grafana as the single pane over both.
-          Dashboards are code, not clicks: committed JSON becomes a config object the platform
-          hot-loads, so the repository is the source of truth and a dashboard edited in the UI has
-          nowhere to hide.</p>
-        <p><b>The overview screen is generated, and it polices itself.</b> A generator builds the
-          operations overview from the dashboards themselves, refusing to build if a dashboard is
-          missing its domain tag or a domain has no single primary, and CI regenerates it to fail on
-          drift. A nightly job compares the live dashboard against the generated one and raises a
-          problem when they disagree. One rule was learned the hard way and is now enforced in tests:
-          no-data must never render green. A tile with no signal is grey, because a green light that
-          means "I have no idea" is worse than no light at all. Alerting is deliberately email only,
-          through one auditable path.</p>
-        <div class="links">
           <a href="/skills/grafana.html">Grafana &#8594;</a>
-          <a href="/skills/prometheus.html">Prometheus &#8594;</a>
-          <a href="/skills/zabbix.html">Zabbix &#8594;</a>
-        </div>
-      </section>
-
-      <section class="block">
-        <h2>Secrets, and a recovery I actually proved</h2>
-        <p>One system owns every secret. Nothing is written to disk and nothing is committed: pipelines
-          fetch what they need at run time and hold it in memory, workloads authenticate by role rather
-          than by carrying a password, and two independent scanners backstop the rule, one at commit
-          time and one at write time, so a secret has to beat both to reach the repository.</p>
-        <p><b>Then I destroyed it on purpose.</b> Recovery claims are worthless until tested, so the
-          secrets VM was not drained or gracefully shut down, it was destroyed outright, then restored
-          from that night's snapshot. It came back initialized and unsealed <b>97 seconds</b> later, and
-          a canary secret written minutes before the destroy was still there, with credential fetches
-          working immediately afterwards. The honest scope: that is a single-node, crash-consistent
-          restore of a VM, not a high-availability failover, and I would not sell it as one. The
-          exercise also did what a good game day should, surfacing real defects that became tracked work
-          rather than a clean write-up.</p>
-        <div class="links">
-          <a href="/skills/vault.html">Vault &#8594;</a>
-          <a href="/skills/incident-postmortem.html">Incidents and postmortems &#8594;</a>
+          <a href="/platform/">The platform &#8594;</a>
         </div>
       </section>
 
       <section class="block">
         <h2>Code on GitHub</h2>
-        <p>A note on what is and is not public, because the honest answer is more useful than a wall of
-          repository links. The AutomationLab repository is <b>private and stays private</b>: it is the
-          live configuration of a running estate, and publishing it would mean publishing the shape of
-          the network it runs. What reaches the public side goes through a fail-closed scrub gate, which
-          is why this site exists and the ops repo does not. So the projects above link to how they
-          work, not to their source. These three repositories are real, and they are all of them:</p>
+        <p>The excerpts above are the real thing, lifted verbatim. What you will not find is a repository
+          link next to each pipeline, and the honest reason is better than a broken link: <b>the
+          AutomationLab repository is private and stays private</b>. It is the live configuration of a
+          running estate, and publishing it would mean publishing the shape of the network it runs.
+          Anything that reaches the public side crosses a fail-closed scrub gate first, which is why this
+          site exists and the ops repo does not. These three repositories are real, and they are all of
+          them:</p>
         <div class="links">
           <a href="https://github.com/billgernert" rel="me">Profile &#8594;</a>
           <a href="https://github.com/billgernert/parsec-lab">parsec-lab &#8594;</a>
@@ -199,6 +395,7 @@
       </section>
 
       <div class="links">
+        <a href="/platform/">How the platform works &#8594;</a>
         <a href="/skills/">Explore the capabilities &#8594;</a>
         <a href="/roadmap/">Read the roadmap &#8594;</a>
       </div>

@@ -118,6 +118,51 @@ code {
 }
 .note { color: var(--muted); font-size: 0.97rem; }
 
+/* Code excerpts (item 136, /projects/). Deliberately NOT syntax-highlighted: the site's CSP
+   allows no scripts at all, and hand-painting fake token colors would be decoration pretending
+   to be a highlighter. Long lines scroll inside the block so the page body never scrolls
+   sideways on a phone. */
+pre.excerpt {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--fg);
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--cyan);
+  border-radius: 6px;
+  padding: 14px 16px;
+  margin: 16px 0 6px;
+  overflow-x: auto;
+  tab-size: 4;
+}
+pre.excerpt code {
+  font-size: inherit;
+  color: inherit;
+  background: none;
+  padding: 0;
+  border-radius: 0;
+}
+.excerpt-cap {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin: 0 0 18px;
+}
+.stages {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  color: var(--fg);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 16px 12px 34px;
+  margin: 16px 0;
+}
+.stages li { margin: 3px 0; }
+.stages li::marker { color: var(--cyan); }
+.stages b { color: var(--green); font-weight: 600; }
+
 /* ==========================================================================
    INDEX PAGE
    ========================================================================== */
