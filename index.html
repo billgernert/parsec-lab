@@ -252,6 +252,7 @@
       <a href="/projects/">Projects</a>
       <a href="/platform/">Platform</a>
       <a href="/diagram/">Diagram</a>
+      <a href="/security/">Security</a>
       <a href="/skills/">Skills</a>
       <a href="/ai/">AI</a>
       <a href="/roadmap/">Roadmap</a>
@@ -325,7 +326,7 @@
                merged-PR API). Edits between each START/END marker are overwritten at sync; the values
                committed here are the last generated snapshot, not hand-typed literals. -->
           <b class="hero-fact"><!--HERO:ITEMS:START-->89<!--HERO:ITEMS:END--></b> backlog items delivered
-          through <b class="hero-fact"><!--HERO:PRS:START-->548<!--HERO:PRS:END--></b> PRs, built with four
+          through <b class="hero-fact"><!--HERO:PRS:START-->549<!--HERO:PRS:END--></b> PRs, built with four
           parallel Claude Code sessions held to a rigid process. I reviewed and approved every one.
           Automation is only as good as its sources of truth, so NetBox owns every IP, Vault owns every
           secret, git owns every definition, and drift has nowhere to live. Recovery is proven, not
@@ -401,6 +402,19 @@
     </section>
 
     <section>
+      <h2>Security</h2>
+      <p>
+        One authority for secrets and nothing on disk. Nothing port-forwarded, nothing listening on the
+        internet, and single sign-on at the edge rather than in the app. Every gate fails closed: when a
+        control cannot tell, it stops. And the control I am proudest of is the one I audited and found
+        <b>fail-open</b>, because a control nobody audits is a control nobody has.
+      </p>
+      <div class="links">
+        <a href="/security/">How it is secured &#8594;</a>
+      </div>
+    </section>
+
+    <section>
       <h2>The lab, in one picture</h2>
       <p>
         Five nodes, four segmented networks, a K3s cluster and everything that runs on it, the platform
@@ -430,19 +444,19 @@
     <section>
       <h2>Skills</h2>
       <dl class="skills">
-        <dt>Cloud &amp; IaC</dt>
+        <dt><a href="/skills/#platform-orchestration">Cloud &amp; IaC</a></dt>
         <dd>AWS, Azure (Entra ID, Intune, O365), Terraform, Packer, Ansible</dd>
-        <dt>CI/CD &amp; GitOps</dt>
+        <dt><a href="/skills/#cicd-gitops">CI/CD &amp; GitOps</a></dt>
         <dd>Jenkins (shared libraries, JCasC), Argo CD, Gitea Actions, GitOps workflows, Kaniko</dd>
-        <dt>Containers &amp; Orchestration</dt>
+        <dt><a href="/skills/#platform-orchestration">Containers &amp; Orchestration</a></dt>
         <dd>Kubernetes (K3s), Helm, Docker, cert-manager, External Secrets</dd>
-        <dt>Languages &amp; APIs</dt>
+        <dt><a href="/skills/#automation-tooling">Languages &amp; APIs</a></dt>
         <dd>Python, PowerShell, Groovy, REST APIs, Microsoft Graph API, Go (familiar)</dd>
-        <dt>Identity &amp; Security</dt>
+        <dt><a href="/skills/#security-identity">Identity &amp; Security</a></dt>
         <dd>Active Directory, Entra ID, hybrid identity (AD Connect), SAML/OIDC SSO, MFA, Conditional Access, gMSA, HashiCorp Vault, PKI (AD CS, step-ca, Let's Encrypt)</dd>
-        <dt>Observability</dt>
+        <dt><a href="/skills/#observability">Observability</a></dt>
         <dd>Zabbix (API automation, self-healing), Prometheus, Grafana, SCOM, SolarWinds</dd>
-        <dt>Virtualization &amp; Network</dt>
+        <dt><a href="/skills/#networking-edge">Virtualization &amp; Network</a></dt>
         <dd>VMware vSphere/vSAN/Horizon, Proxmox VE (HA clusters), OPNsense, VLAN design, Cloudflare Zero Trust</dd>
       </dl>
       <div class="links">
