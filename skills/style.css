@@ -164,6 +164,88 @@ pre.excerpt code {
 .stages b { color: var(--green); font-weight: 600; }
 
 /* ==========================================================================
+   DIAGRAM PAGE (item 136 PR5)
+   Pure HTML/CSS, no scripts: the site's CSP is default-src 'none', so a click
+   handler is not an option. The "clickable regions" are real anchors into the
+   explanation cards below, and :target does the highlighting a handler would
+   otherwise do. That also means the regions work with JS off, keyboard-focus
+   correctly, and survive being opened in a new tab.
+   ========================================================================== */
+
+.diagram { margin: 20px 0 10px; }
+.tier {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  padding: 10px 12px 12px;
+  margin-bottom: 8px;
+}
+.tier-label {
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.tier-row { display: flex; flex-wrap: wrap; gap: 8px; }
+a.dnode {
+  flex: 1 1 130px;
+  min-width: 116px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 8px 10px;
+  text-decoration: none;
+  display: block;
+}
+a.dnode:hover, a.dnode:focus-visible {
+  border-color: var(--border-strong);
+  background: var(--card-hover);
+  text-decoration: none;
+}
+.dnode-name {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  color: var(--cyan);
+}
+.dnode-role {
+  display: block;
+  font-size: 0.71rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.flow {
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin: 1px 0;
+}
+.region-card {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: 6px;
+  background: var(--card);
+  padding: 12px 15px;
+  margin: 10px 0;
+  scroll-margin-top: 14px;
+}
+.region-card:target {
+  border-left-color: var(--green);
+  background: var(--green-wash);
+}
+.region-card h3 {
+  font-family: var(--mono);
+  font-size: 0.84rem;
+  letter-spacing: 1px;
+  color: var(--cyan);
+  margin-bottom: 2px;
+}
+.region-card p { margin: 8px 0 0; font-size: 0.95rem; }
+
+/* ==========================================================================
    INDEX PAGE
    ========================================================================== */
 

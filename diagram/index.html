@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lab diagram - Bill Gernert</title>
+  <meta name="description" content="The AutomationLab architecture: a five-node Proxmox HA cluster, four segmented networks, a K3s cluster and its workloads, the platform services, identity, backup, and the edge. Click any region for what it does and why.">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Crect%20width%3D%27100%27%20height%3D%27100%27%20fill%3D%27%230a0e1a%27%2F%3E%3Cpolygon%20points%3D%2750%2C14%2081%2C32%2081%2C68%2050%2C86%2019%2C68%2019%2C32%27%20fill%3D%27none%27%20stroke%3D%27%2300d4ff%27%20stroke-width%3D%275%27%2F%3E%3Ccircle%20cx%3D%2750%27%20cy%3D%2750%27%20r%3D%279%27%20fill%3D%27%2300ff96%27%2F%3E%3C%2Fsvg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../skills/style.css">
+</head>
+<body>
+  <main class="page-narrow">
+    <nav class="topnav" aria-label="Primary">
+      <a href="/">Home</a>
+      <a href="/projects/">Projects</a>
+      <a href="/platform/">Platform</a>
+      <a href="/diagram/" class="active" aria-current="page">Diagram</a>
+      <a href="/skills/">Skills</a>
+      <a href="/ai/">AI</a>
+      <a href="/roadmap/">Roadmap</a>
+      <span class="topnav-spacer"></span>
+      <a href="https://github.com/billgernert" rel="me">GitHub</a>
+      <a href="https://www.linkedin.com/in/billgernert" rel="me">LinkedIn</a>
+    </nav>
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <a href="/">parsec-lab.com</a>
+      <span class="sep">/</span>
+      <span class="here">Diagram</span>
+    </nav>
+
+    <header class="skill-head">
+      <span class="badge">Architecture</span>
+      <h1>The lab, in one picture</h1>
+      <p class="descriptor">Everything below runs on hardware in my house, and every box is a thing
+        that is actually running rather than a thing I plan to run. <b>Click any region</b> for what it
+        is and why it is there. Layers read top to bottom: how traffic gets in, what it lands on, and
+        what holds the truth underneath.</p>
+    </header>
+
+    <div class="skill-body">
+
+      <div class="diagram">
+        <div class="tier">
+          <div class="tier-label">Edge - how anything gets in</div>
+          <div class="tier-row">
+            <a class="dnode" href="#edge"><span class="dnode-name">Tunnel</span><span class="dnode-role">outbound-only connector, no open ports</span></a>
+            <a class="dnode" href="#edge"><span class="dnode-name">Ingress</span><span class="dnode-role">routes to in-cluster services</span></a>
+            <a class="dnode" href="#edge"><span class="dnode-name">SSO</span><span class="dnode-role">identity-gated at the edge</span></a>
+            <a class="dnode" href="#certs"><span class="dnode-name">cert-manager</span><span class="dnode-role">wildcard TLS, auto-renewed</span></a>
+          </div>
+        </div>
+
+        <div class="flow">&#8595;</div>
+
+        <div class="tier">
+          <div class="tier-label">Network - four segments, one firewall</div>
+          <div class="tier-row">
+            <a class="dnode" href="#network"><span class="dnode-name">OPNsense</span><span class="dnode-role">routing + firewall between segments</span></a>
+            <a class="dnode" href="#network"><span class="dnode-name">Infrastructure</span><span class="dnode-role">platform services</span></a>
+            <a class="dnode" href="#network"><span class="dnode-name">Kubernetes</span><span class="dnode-role">the cluster</span></a>
+            <a class="dnode" href="#network"><span class="dnode-name">Identity</span><span class="dnode-role">directory + PKI</span></a>
+            <a class="dnode" href="#network"><span class="dnode-name">Clients</span><span class="dnode-role">workstations</span></a>
+          </div>
+        </div>
+
+        <div class="flow">&#8595;</div>
+
+        <div class="tier">
+          <div class="tier-label">Compute - five-node Proxmox HA cluster</div>
+          <div class="tier-row">
+            <a class="dnode" href="#compute"><span class="dnode-name">Node x5</span><span class="dnode-role">HA cluster; a guest can move between them</span></a>
+            <a class="dnode" href="#compute"><span class="dnode-name">Templates</span><span class="dnode-role">rebuilt weekly, never patched in place</span></a>
+            <a class="dnode" href="#compute"><span class="dnode-name">Cloud image</span><span class="dnode-role">the Linux build path</span></a>
+          </div>
+        </div>
+
+        <div class="flow">&#8595;</div>
+
+        <div class="tier">
+          <div class="tier-label">Kubernetes - K3s, one control node + two workers</div>
+          <div class="tier-row">
+            <a class="dnode" href="#kubernetes"><span class="dnode-name">Control</span><span class="dnode-role">API + scheduler</span></a>
+            <a class="dnode" href="#kubernetes"><span class="dnode-name">Worker x2</span><span class="dnode-role">where the work runs</span></a>
+            <a class="dnode" href="#cicd"><span class="dnode-name">Jenkins</span><span class="dnode-role">prod + a separate dev instance</span></a>
+            <a class="dnode" href="#cicd"><span class="dnode-name">Argo CD</span><span class="dnode-role">reconciles the cluster to git</span></a>
+            <a class="dnode" href="#cicd"><span class="dnode-name">Kaniko</span><span class="dnode-role">builds images in-cluster</span></a>
+            <a class="dnode" href="#cicd"><span class="dnode-name">Renovate</span><span class="dnode-role">dependency PRs</span></a>
+            <a class="dnode" href="#ai"><span class="dnode-name">LLM gateway</span><span class="dnode-role">routes, keys, and meters AI calls</span></a>
+            <a class="dnode" href="#monitoring"><span class="dnode-name">Prometheus</span><span class="dnode-role">metrics + alerting rules</span></a>
+          </div>
+        </div>
+
+        <div class="flow">&#8595;</div>
+
+        <div class="tier">
+          <div class="tier-label">Platform - the things that hold the truth</div>
+          <div class="tier-row">
+            <a class="dnode" href="#secrets"><span class="dnode-name">Vault</span><span class="dnode-role">every secret, fetched at run time</span></a>
+            <a class="dnode" href="#cicd"><span class="dnode-name">Gitea</span><span class="dnode-role">every definition, reviewed as a PR</span></a>
+            <a class="dnode" href="#ipam"><span class="dnode-name">NetBox</span><span class="dnode-role">every address</span></a>
+            <a class="dnode" href="#monitoring"><span class="dnode-name">Zabbix</span><span class="dnode-role">agent fleet + self-heal</span></a>
+            <a class="dnode" href="#monitoring"><span class="dnode-name">Grafana</span><span class="dnode-role">one pane over both</span></a>
+            <a class="dnode" href="#mail"><span class="dnode-name">Mail</span><span class="dnode-role">the only alerting path</span></a>
+          </div>
+        </div>
+
+        <div class="flow">&#8595;</div>
+
+        <div class="tier">
+          <div class="tier-label">Identity and backup - underneath everything</div>
+          <div class="tier-row">
+            <a class="dnode" href="#identity"><span class="dnode-name">Directory</span><span class="dnode-role">two controllers, on-prem authoritative</span></a>
+            <a class="dnode" href="#identity"><span class="dnode-name">Cloud directory</span><span class="dnode-role">synced up, never down</span></a>
+            <a class="dnode" href="#certs"><span class="dnode-name">Internal CA</span><span class="dnode-role">machine identity for private services</span></a>
+            <a class="dnode" href="#backup"><span class="dnode-name">Backup server</span><span class="dnode-role">nightly, and proven by restoring</span></a>
+            <a class="dnode" href="#backup"><span class="dnode-name">NAS</span><span class="dnode-role">bulk storage + backup target</span></a>
+          </div>
+        </div>
+      </div>
+
+      <p class="note">Addresses, segment numbers, and machine names are deliberately not on this
+        picture. The internal copy of this diagram has them; that copy stays private, and the gate
+        between the two repos is fail-closed rather than a habit. What is on this page is the shape,
+        which is the part that is actually interesting.</p>
+
+      <section class="block">
+        <h2>The regions</h2>
+
+        <div class="region-card" id="edge">
+          <h3>Edge</h3>
+          <p>Nothing is port-forwarded and nothing listens on the internet. A connector makes an
+            <b>outbound</b> connection to the edge network, and traffic comes back down that tunnel to
+            an ingress controller which routes it to a service inside the cluster. Every application
+            hostname sits behind single sign-on <em>at the edge</em>, so an unauthenticated request is
+            turned away before it reaches the app rather than by the app. The public landing page you
+            are reading is the deliberate exception: it is the one thing with no login in front of
+            it.</p>
+        </div>
+
+        <div class="region-card" id="certs">
+          <h3>Certificates</h3>
+          <p>Two certificate stories, on purpose. Public hostnames get a wildcard certificate issued
+            automatically against a DNS challenge and renewed without anyone remembering to. Internal
+            services that no public authority should ever vouch for get theirs from an internal
+            certificate authority instead. The interesting part of running a CA is not issuing, it is
+            that the <b>templates are the privilege boundary</b>: an over-permissive template that lets
+            a low-privileged account choose its own subject is a well-known escalation path, so scoping
+            them tightly is the actual work.</p>
+        </div>
+
+        <div class="region-card" id="network">
+          <h3>Network</h3>
+          <p>Four segments, split by role rather than by convenience: platform infrastructure, the
+            Kubernetes cluster, identity, and client machines. A firewall routes between them, so
+            "which segment is this in" is a real answer with real consequences rather than a diagram
+            label. Segmentation is also why provisioning has a pre-flight that refuses to build into a
+            segment whose network path has not been proven: a machine on an unreachable segment looks
+            fine right up until you need it.</p>
+        </div>
+
+        <div class="region-card" id="compute">
+          <h3>Compute</h3>
+          <p>Five nodes in a high-availability cluster, so a guest is not welded to the machine it
+            happens to be running on. Two build paths sit on top: Windows clones a template that a
+            weekly pipeline rebuilds from scratch (patching a golden image is a fiction, rebuilding it
+            is not), and Linux boots a shared cloud image with no golden-template dependency at all.
+            Every machine is built by a pipeline, never by hand.</p>
+        </div>
+
+        <div class="region-card" id="kubernetes">
+          <h3>Kubernetes</h3>
+          <p>A K3s cluster: one control node, two workers. It is where the platform's own software
+            runs, which is the part people usually leave out of a homelab picture. CI, GitOps
+            reconciliation, image builds, dependency updates, the AI gateway, and the metrics stack are
+            all workloads here, not pets on a VM somewhere.</p>
+        </div>
+
+        <div class="region-card" id="cicd">
+          <h3>CI/CD and GitOps</h3>
+          <p>Git is the definition of the estate, and a change reaches it as a branch and a pull
+            request with lint and security gates as required checks. CI runs on the cluster, with a
+            <b>separate dev instance</b> so that changing the pipeline platform does not mean testing
+            in production. Images are built in-cluster rather than on somebody's laptop, dependency
+            bumps arrive as PRs, and a reconciler continuously drags the cluster back to what git says
+            it should be. Drift has nowhere to live.</p>
+        </div>
+
+        <div class="region-card" id="secrets">
+          <h3>Secrets</h3>
+          <p>One system owns every secret and nothing is written to disk: pipelines fetch what they
+            need at run time and hold it in memory, and workloads authenticate by role rather than by
+            carrying a password around. Two independent scanners backstop the rule, one at commit time
+            and one at write time, so a secret has to beat both to reach the repository. This tier is
+            also the one whose recovery I proved by destroying it outright and restoring it.</p>
+        </div>
+
+        <div class="region-card" id="ipam">
+          <h3>Addressing</h3>
+          <p>One system is the source of truth for addresses, and provisioning asks it rather than a
+            spreadsheet or a memory. That is what makes an automated build safe to run twice: the
+            address is allocated, recorded, and released again by the same pipeline that created it,
+            and released only once the machine it belonged to is genuinely gone.</p>
+        </div>
+
+        <div class="region-card" id="monitoring">
+          <h3>Monitoring</h3>
+          <p>Three tools with distinct jobs: agent-based monitoring for the traditional fleet, a
+            metrics stack for the cluster and the hypervisors, and one visualization pane over both.
+            Dashboards are code, so the repository is the source of truth and a dashboard edited in the
+            UI has nowhere to hide. The overview screen is generated from the dashboards themselves and
+            refuses to build if one is missing its domain tag. A tile with no signal renders grey, never
+            green, because a green light meaning "I have no idea" is worse than no light.</p>
+        </div>
+
+        <div class="region-card" id="ai">
+          <h3>AI</h3>
+          <p>A local model does the high-volume, zero-cost, privacy-sensitive work and never leaves the
+            network; a paid API is reserved for the harder reasoning where it earns its cost. A gateway
+            fronts them so calls are routed, keyed, and metered in one place. Spend is governed by
+            layered budgets where any layer can say no, and the innermost one fails closed: a budget
+            that is missing or unreadable denies rather than allows.</p>
+        </div>
+
+        <div class="region-card" id="identity">
+          <h3>Identity</h3>
+          <p>An on-prem directory with two controllers is authoritative, and it synchronizes <em>up</em>
+            to the cloud directory, never down. That direction is the whole design: edit an attribute in
+            the cloud and the next sync quietly overwrites it from on-prem, with no error, so the rule
+            is to change it where the authority is. Joiners and leavers are pipelines driven by
+            declarative role definitions, and offboarding disables rather than deletes.</p>
+        </div>
+
+        <div class="region-card" id="backup">
+          <h3>Backup</h3>
+          <p>Nightly backups to a dedicated backup server, with bulk storage on a NAS. The part that
+            matters is not the schedule, it is that the restore has actually been performed: the secrets
+            VM was destroyed on purpose and restored from that night's snapshot, and a canary written
+            minutes before the destroy survived. A backup you have never restored is a hypothesis.</p>
+        </div>
+
+        <div class="region-card" id="mail">
+          <h3>Alerting</h3>
+          <p>Every alert leaves by one path: a self-hosted mail platform, into role-based groups. That
+            is a deliberate constraint rather than a limitation. Push services were tried and removed,
+            because one auditable notification path that everything shares beats several that each
+            work slightly differently and fail in their own way.</p>
+        </div>
+      </section>
+
+      <div class="links">
+        <a href="/platform/">How the platform works &#8594;</a>
+        <a href="/projects/">The pipelines that build it &#8594;</a>
+        <a href="/skills/">Explore the capabilities &#8594;</a>
+      </div>
+    </div>
+
+    <footer>
+      <a href="/">&#8592; Home</a> &#183; built and operated by Bill Gernert
+      <p class="disclaimer">Automation lab is a portfolio site. All content is provided as-is, without warranty of any kind, and does not constitute professional advice. Views are my own and do not represent any employer. Unauthorized use of this site or its content is prohibited. Product names and trademarks are the property of their respective owners. Copyright 2026 Bill Gernert. All rights reserved.</p>
+    </footer>
+  </main>
+</body>
+</html>
