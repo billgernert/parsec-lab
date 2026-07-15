@@ -38,39 +38,39 @@ One thing to know up front: almost none of this runs on a fixed server. When the
 
 ### Phase 1: Reserve and place
 
-**Stage 1 — Allocate an IP.** The pipeline asks **NetBox**, my IPAM (IP Address Management) tool and single source of truth for the network, to reserve the next free address in the right prefix. This kills the old race condition where the IP you picked was taken by the time your server was ready. NetBox hands back the address, and from that I derive a collision-free **Proxmox VM ID** and the gateway. (Proxmox is the virtualization platform running the actual VMs.)
+**Stage 1 - Allocate an IP.** The pipeline asks **NetBox**, my IPAM (IP Address Management) tool and single source of truth for the network, to reserve the next free address in the right prefix. This kills the old race condition where the IP you picked was taken by the time your server was ready. NetBox hands back the address, and from that I derive a collision-free **Proxmox VM ID** and the gateway. (Proxmox is the virtualization platform running the actual VMs.)
 
-**Stage 2 — Pick the best node.** The cluster has multiple physical nodes. The pipeline ranks the online ones by free memory and runs a disk pre-flight check sized to the request, so the VM lands on a host that can actually hold it. No more guessing which node has room.
+**Stage 2 - Pick the best node.** The cluster has multiple physical nodes. The pipeline ranks the online ones by free memory and runs a disk pre-flight check sized to the request, so the VM lands on a host that can actually hold it. No more guessing which node has room.
 
 ### Phase 2: Prepare
 
-**Stage 3 — Generate a local admin password.** The pipeline logs in to **Vault** (HashiCorp's secrets manager) using **AppRole** (a machine-to-machine login method, no human passwords involved) and generates a unique local Administrator password for this specific host, stored safely in Vault. Every server gets its own password. Nothing is reused, nothing is hardcoded.
+**Stage 3 - Generate a local admin password.** The pipeline logs in to **Vault** (HashiCorp's secrets manager) using **AppRole** (a machine-to-machine login method, no human passwords involved) and generates a unique local Administrator password for this specific host, stored safely in Vault. Every server gets its own password. Nothing is reused, nothing is hardcoded.
 
-**Stage 4 — Resolve the template.** A small script looks up the tagged VM template for the requested OS and returns its ID and location. Templates are golden images I keep patched and ready, so a new build starts from a known-good baseline instead of a fresh install.
+**Stage 4 - Resolve the template.** A small script looks up the tagged VM template for the requested OS and returns its ID and location. Templates are golden images I keep patched and ready, so a new build starts from a known-good baseline instead of a fresh install.
 
-**Stage 5 — Terraform Plan.** **Terraform** (the Infrastructure as Code tool that defines infrastructure in version-controlled files) generates a *plan*: a precise, readable description of exactly what it's about to create. Each build gets its own isolated workspace so concurrent builds never step on each other. Critically, this is only the plan. Nothing has been built yet.
+**Stage 5 - Terraform Plan.** **Terraform** (the Infrastructure as Code tool that defines infrastructure in version-controlled files) generates a *plan*: a precise, readable description of exactly what it's about to create. Each build gets its own isolated workspace so concurrent builds never step on each other. Critically, this is only the plan. Nothing has been built yet.
 
 ### Phase 3: Approve
 
-**Stage 6 — The approval gate.** The pipeline pauses and sends an HTML email with the VM's details and a deep link straight to the approval screen. The approver reviews what's about to be built and clicks **Apply** or **Abort**.
+**Stage 6 - The approval gate.** The pipeline pauses and sends an HTML email with the VM's details and a deep link straight to the approval screen. The approver reviews what's about to be built and clicks **Apply** or **Abort**.
 
 This placement is deliberate. You're not rubber-stamping a blank request, you're approving the actual plan, with the real resources, IP, and configuration laid out in front of you. Approve with confidence, or abort before anything exists.
 
 ### Phase 4: Build
 
-**Stage 7 — Terraform Apply.** On approval, Terraform full-clones the template to the chosen node, applies a **cloud-init** drive (a standard way to hand a VM its first-boot settings: static IP, gateway, DNS), and boots it. Then it clears the template tags the clone inherited, using the Proxmox API, so the new VM isn't mistaken for a template.
+**Stage 7 - Terraform Apply.** On approval, Terraform full-clones the template to the chosen node, applies a **cloud-init** drive (a standard way to hand a VM its first-boot settings: static IP, gateway, DNS), and boots it. Then it clears the template tags the clone inherited, using the Proxmox API, so the new VM isn't mistaken for a template.
 
-**Stages 8-9 — Register monitoring and wait for the VM.** The pipeline registers the host in **Zabbix** (the monitoring system) with a unique **PSK** (pre-shared key, so the agent and server trust each other over an encrypted channel), then polls the VM until **WinRM** (Windows Remote Management, the channel Ansible uses to configure Windows) is up and answering. It doesn't move on until the machine is genuinely ready.
+**Stages 8-9 - Register monitoring and wait for the VM.** The pipeline registers the host in **Zabbix** (the monitoring system) with a unique **PSK** (pre-shared key, so the agent and server trust each other over an encrypted channel), then polls the VM until **WinRM** (Windows Remote Management, the channel Ansible uses to configure Windows) is up and answering. It doesn't move on until the machine is genuinely ready.
 
-**Stages 10-12 — Disk work.** If the OS disk needs to be bigger than the template's, the pipeline grows it through the Proxmox API. If the request asked for fast local **NVMe** storage, it live-migrates the disk to node-local storage with no downtime to the guest. If a separate data disk was requested, it attaches one. All of this is transparent to the running VM.
+**Stages 10-12 - Disk work.** If the OS disk needs to be bigger than the template's, the pipeline grows it through the Proxmox API. If the request asked for fast local **NVMe** storage, it live-migrates the disk to node-local storage with no downtime to the guest. If a separate data disk was requested, it attaches one. All of this is transparent to the running VM.
 
 ### Phase 5: Configure and finish
 
-**Stage 13 — Configure with Ansible.** This is where the bare VM becomes a real server. **Ansible** (the configuration tool that enforces desired state) runs through an ordered set of roles: rotate the password, expand the C: drive inside the guest, rename and domain-join the machine into the right OU, install the Zabbix agent, set time sync, configure the firewall, set up **Duo MFA** (multi-factor authentication on RDP logins, keys pulled from Vault, set to fail-open if Duo is unreachable so I'm never locked out), then install the requested applications, Windows roles and features, and initialize the data disk. Every secret in this stage comes from Vault. Nothing is stored in the pipeline.
+**Stage 13 - Configure with Ansible.** This is where the bare VM becomes a real server. **Ansible** (the configuration tool that enforces desired state) runs through an ordered set of roles: rotate the password, expand the C: drive inside the guest, rename and domain-join the machine into the right OU, install the Zabbix agent, set time sync, configure the firewall, set up **Duo MFA** (multi-factor authentication on RDP logins, keys pulled from Vault, set to fail-open if Duo is unreachable so I'm never locked out), then install the requested applications, Windows roles and features, and initialize the data disk. Every secret in this stage comes from Vault. Nothing is stored in the pipeline.
 
-**Stage 14 — Register DNS.** The pipeline creates the forward (A) and reverse (PTR) DNS records on the domain controller, and optionally publishes a public record too. The record creation is idempotent, meaning running it twice causes no harm, it just ensures the record exists.
+**Stage 14 - Register DNS.** The pipeline creates the forward (A) and reverse (PTR) DNS records on the domain controller, and optionally publishes a public record too. The record creation is idempotent, meaning running it twice causes no harm, it just ensures the record exists.
 
-**Stage 15 — Notify and clean up.** On success, it emails the requester that the server is ready. On failure, it conditionally releases the NetBox IP it reserved back at the start, so a failed build doesn't strand an address. That single cleanup step is a direct answer to one of the worst parts of the old manual process.
+**Stage 15 - Notify and clean up.** On success, it emails the requester that the server is ready. On failure, it conditionally releases the NetBox IP it reserved back at the start, so a failed build doesn't strand an address. That single cleanup step is a direct answer to one of the worst parts of the old manual process.
 
 ---
 
