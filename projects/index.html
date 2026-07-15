@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Projects - Bill Gernert</title>
+  <meta name="description" content="The major projects inside AutomationLab: provisioning as a pipeline, a self-healing platform, identity lifecycle automation, AIOps, observability and the NOC, and secrets with a proven recovery.">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Crect%20width%3D%27100%27%20height%3D%27100%27%20fill%3D%27%230a0e1a%27%2F%3E%3Cpolygon%20points%3D%2750%2C14%2081%2C32%2081%2C68%2050%2C86%2019%2C68%2019%2C32%27%20fill%3D%27none%27%20stroke%3D%27%2300d4ff%27%20stroke-width%3D%275%27%2F%3E%3Ccircle%20cx%3D%2750%27%20cy%3D%2750%27%20r%3D%279%27%20fill%3D%27%2300ff96%27%2F%3E%3C%2Fsvg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../skills/style.css">
+</head>
+<body>
+  <main class="page-narrow">
+    <nav class="topnav" aria-label="Primary">
+      <a href="/">Home</a>
+      <a href="/projects/" class="active" aria-current="page">Projects</a>
+      <a href="/skills/">Skills</a>
+      <a href="/ai/">AI</a>
+      <a href="/roadmap/">Roadmap</a>
+      <span class="topnav-spacer"></span>
+      <a href="https://github.com/billgernert" rel="me">GitHub</a>
+      <a href="https://www.linkedin.com/in/billgernert" rel="me">LinkedIn</a>
+    </nav>
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <a href="/">parsec-lab.com</a>
+      <span class="sep">/</span>
+      <span class="here">Projects</span>
+    </nav>
+
+    <header class="skill-head">
+      <span class="badge">What I built</span>
+      <h1>Projects</h1>
+      <p class="descriptor">Six things I built inside AutomationLab, each a real subsystem rather than a
+        demo: what it does, how it works, and where I drew the line on what it is allowed to do by
+        itself. Where a design has a limit, it is named here rather than rounded up.</p>
+    </header>
+
+    <div class="skill-body">
+      <section class="block">
+        <h2>Provisioning is a pipeline, not a checklist</h2>
+        <p>A request for a VM becomes a single pipeline run. Before anything is allocated, a collision
+          check asks every system that could already know the name, and an unreachable system counts as
+          a collision rather than a silent all-clear. Then an address is allocated from the IPAM system
+          of record, a node is chosen, and a plan is built in that machine's own infrastructure-as-code
+          workspace. A human approves the plan, it applies, the host is registered for monitoring with a
+          unique per-host key minted straight into the secrets manager, and only then does configuration
+          management run, so the agent is trusted before it ever starts.</p>
+        <p><b>Failure is roll-forward, not rollback.</b> The apply is the boundary: fail before it and
+          the reserved address is released, so nothing is orphaned; fail after it and the machine is
+          kept, because re-running the same request continues from where it stopped. A live VM never
+          gets rolled back underneath itself. Decommission reverses the build in the safe order,
+          releasing the address only once the machine is actually gone.</p>
+        <p>Both Linux and Windows are first-class, and they differ where it matters: Windows clones a
+          template built as code by its own image pipeline, while Linux boots a shared cloud image with
+          no golden-template dependency. Each VM getting its own state workspace is the point: a bad
+          apply is scoped to one machine instead of the fleet.</p>
+        <div class="links">
+          <a href="/skills/terraform.html">Terraform &#8594;</a>
+          <a href="/skills/netbox-ipam.html">NetBox IPAM &#8594;</a>
+          <a href="/skills/ansible.html">Ansible &#8594;</a>
+          <a href="/skills/proxmox.html">Proxmox &#8594;</a>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>A platform that heals itself, and says so</h2>
+        <p>Monitoring does not just alert, it repairs. An engine reads each failure and classifies it,
+          then splits the work: drift it can correct at the server, such as a moved address or a stale
+          key, it fixes directly, and anything needing a touch on the host itself is queued as a plan.
+          That plan is emailed in full and waits on a human approval gate; unapproved, it times out and
+          not one host is touched. Dispatch is OS-aware, taking a different route to Linux and to
+          Windows, and deliberately running only the roles that repair monitoring, never the
+          provisioning roles that would be destructive on a live host.</p>
+        <p><b>The audit trail is honest about its own limits.</b> Every run records an outcome per host,
+          and the vocabulary is exactly what the engine can actually observe: applied, dispatched, or
+          escalated. It does not claim a heal went green, because it does not yet watch the host
+          afterwards, and inventing that verdict would make the record a liability. One narrow case runs
+          with no human in the loop at all, restarting a single stateless service: it is fenced by a
+          maintenance-window guard, a hard two-attempt cap so it can never loop, and an allowlist on the
+          host permitting exactly one command and nothing else.</p>
+        <div class="links">
+          <a href="/skills/zabbix.html">Zabbix &#8594;</a>
+          <a href="/skills/ansible.html">Ansible &#8594;</a>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>Identity, from first day to last</h2>
+        <p>Joiners and leavers are pipelines, driven by declarative role definitions rather than
+          per-person judgement: a role maps to its groups, its mail lists, and its app assignments. On
+          the way in, an account is created in the authoritative on-prem directory, then the cloud side
+          waits out directory-sync latency before assigning cloud groups and single-sign-on tiles.
+          Temporary credentials are minted with a short time-to-live and one-time use.</p>
+        <p><b>On the way out, nothing is deleted.</b> Offboarding disables first: strip the groups,
+          datestamp the record, move the object aside, and commit a machine-readable snapshot of the
+          account <em>before</em> the first group comes off, so a wrong offboard is a restore rather than
+          an incident. Deletion happens only after a 30-day grace period, and only for accounts with a
+          clean paper trail. An account that someone re-enabled, or one that arrived outside the
+          pipeline, is flagged as an anomaly and left alone: the sweep only removes what it can
+          explain.</p>
+        <p><b>The best story here is a bug I found in my own control.</b> Deprovisioning is gated by
+          two-person approval, restricted to an admin allowlist, and the requester cannot approve their
+          own request. An audit of that gate found it fail-<em>open</em>: when the requester was blank,
+          which happens on API, timer, and replay-triggered runs, the identity check short-circuited and
+          a single actor could approve their own offboard. It now hard-fails on a blank requester, so
+          every path reaches the gate with a name attached. A control nobody audits is a control nobody
+          has.</p>
+        <div class="links">
+          <a href="/skills/active-directory.html">Active Directory &#8594;</a>
+          <a href="/skills/entra-id.html">Entra ID &#8594;</a>
+          <a href="/skills/ad-cs-pki.html">AD CS and PKI &#8594;</a>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>AIOps: triage that earns its place</h2>
+        <p>Collectors sweep monitoring, metrics, CI, and backups into one findings table, each run
+          leaving a heartbeat so a quiet night is distinguishable from a broken collector. A local model
+          classifies each finding, correlation is done deterministically in code rather than asked of
+          the model, and a short digest lands before the day starts, carrying a health banner so a
+          degraded run is visibly red instead of silently empty. When something fires, an analyzer
+          returns a probable cause and a single suggested first check, inline with the alert.</p>
+        <p><b>Scanner triage fails closed.</b> Vulnerability and secret-scanner output is sorted into
+          exploitable-in-context versus likely-noise, but only a valid noise verdict may ever downgrade
+          a finding: if the model is down, times out, or answers with nonsense, the finding stays real.
+          Secret values are dropped before the model sees them at all. Untrusted text is fenced and
+          treated as data, and there is no path from model output to execution: the output becomes a
+          row, an email, or an issue, never a command. Every verdict is a database row rather than a log
+          line, and the boundary between proposing and doing is hard.</p>
+        <div class="links">
+          <a href="/ai/">How I use AI &#8594;</a>
+          <a href="/skills/devsecops.html">DevSecOps &#8594;</a>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>Observability, and one screen to start from</h2>
+        <p>Three tools with distinct jobs: agent-based monitoring for the traditional fleet, Prometheus
+          for the Kubernetes and virtualization estate, and Grafana as the single pane over both.
+          Dashboards are code, not clicks: committed JSON becomes a config object the platform
+          hot-loads, so the repository is the source of truth and a dashboard edited in the UI has
+          nowhere to hide.</p>
+        <p><b>The overview screen is generated, and it polices itself.</b> A generator builds the
+          operations overview from the dashboards themselves, refusing to build if a dashboard is
+          missing its domain tag or a domain has no single primary, and CI regenerates it to fail on
+          drift. A nightly job compares the live dashboard against the generated one and raises a
+          problem when they disagree. One rule was learned the hard way and is now enforced in tests:
+          no-data must never render green. A tile with no signal is grey, because a green light that
+          means "I have no idea" is worse than no light at all. Alerting is deliberately email only,
+          through one auditable path.</p>
+        <div class="links">
+          <a href="/skills/grafana.html">Grafana &#8594;</a>
+          <a href="/skills/prometheus.html">Prometheus &#8594;</a>
+          <a href="/skills/zabbix.html">Zabbix &#8594;</a>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>Secrets, and a recovery I actually proved</h2>
+        <p>One system owns every secret. Nothing is written to disk and nothing is committed: pipelines
+          fetch what they need at run time and hold it in memory, workloads authenticate by role rather
+          than by carrying a password, and two independent scanners backstop the rule, one at commit
+          time and one at write time, so a secret has to beat both to reach the repository.</p>
+        <p><b>Then I destroyed it on purpose.</b> Recovery claims are worthless until tested, so the
+          secrets VM was not drained or gracefully shut down, it was destroyed outright, then restored
+          from that night's snapshot. It came back initialized and unsealed <b>97 seconds</b> later, and
+          a canary secret written minutes before the destroy was still there, with credential fetches
+          working immediately afterwards. The honest scope: that is a single-node, crash-consistent
+          restore of a VM, not a high-availability failover, and I would not sell it as one. The
+          exercise also did what a good game day should, surfacing real defects that became tracked work
+          rather than a clean write-up.</p>
+        <div class="links">
+          <a href="/skills/vault.html">Vault &#8594;</a>
+          <a href="/skills/incident-postmortem.html">Incidents and postmortems &#8594;</a>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>Code on GitHub</h2>
+        <p>A note on what is and is not public, because the honest answer is more useful than a wall of
+          repository links. The AutomationLab repository is <b>private and stays private</b>: it is the
+          live configuration of a running estate, and publishing it would mean publishing the shape of
+          the network it runs. What reaches the public side goes through a fail-closed scrub gate, which
+          is why this site exists and the ops repo does not. So the projects above link to how they
+          work, not to their source. These three repositories are real, and they are all of them:</p>
+        <div class="links">
+          <a href="https://github.com/billgernert" rel="me">Profile &#8594;</a>
+          <a href="https://github.com/billgernert/parsec-lab">parsec-lab &#8594;</a>
+          <a href="https://github.com/billgernert/production-automation">production-automation &#8594;</a>
+        </div>
+        <p class="note"><b>parsec-lab</b> is this site's source: the static pages you are reading,
+          mirrored out of the private repo through that scrub gate. <b>production-automation</b> is
+          de-identified professional work predating the lab, each script documented with its story, its
+          failsafes, and its setup: a Horizon VDI monitor, a three-phase Horizon patching run with a
+          powered-on-image failsafe, and a rolling zero-downtime deployment across an IIS farm.</p>
+      </section>
+
+      <div class="links">
+        <a href="/skills/">Explore the capabilities &#8594;</a>
+        <a href="/roadmap/">Read the roadmap &#8594;</a>
+      </div>
+    </div>
+
+    <footer>
+      <a href="/">&#8592; Home</a> &#183; built and operated by Bill Gernert
+      <p class="disclaimer">Automation lab is a portfolio site. All content is provided as-is, without warranty of any kind, and does not constitute professional advice. Views are my own and do not represent any employer. Unauthorized use of this site or its content is prohibited. Product names and trademarks are the property of their respective owners. Copyright 2026 Bill Gernert. All rights reserved.</p>
+    </footer>
+  </main>
+</body>
+</html>
