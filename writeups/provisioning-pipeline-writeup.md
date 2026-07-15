@@ -128,6 +128,7 @@ This pipeline works, but it's never really finished. A few things I'm planning o
 
 The through-line for all of it is the same idea that started the project: take something that used to be manual, fragile, and slow, and turn it into something repeatable, auditable, and boring, in the best possible way.
 
-![Provisioning pipeline flow](provisioning-pipeline.png)
-
-> The diagram above is a static image. The live, interactive version lives on [parsec-lab.com](https://parsec-lab.com) *(coming soon)*.
+> **The live, stage-by-stage version of this pipeline** is at
+> [parsec-lab.com/projects](https://parsec-lab.com/projects/), alongside the other pipelines that run
+> this lab and the bugs that shaped them. The architecture it all runs on is at
+> [parsec-lab.com/diagram](https://parsec-lab.com/diagram/).
