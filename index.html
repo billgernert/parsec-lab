@@ -134,6 +134,26 @@
       box-shadow: 0 0 14px rgba(0, 212, 255, 0.25);
     }
 
+    /* site-wide top navigation (item 136) */
+    .topnav {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 18px;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin: 0 0 26px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .topnav a { color: var(--muted); }
+    .topnav a:hover { color: var(--cyan); text-decoration: none; }
+    .topnav a.active { color: var(--fg); }
+    .topnav .topnav-spacer { flex: 1 1 auto; }
+    @media (max-width: 480px) { .topnav .topnav-spacer { display: none; } }
+
     footer {
       margin-top: 52px;
       padding-top: 20px;
@@ -223,6 +243,14 @@
 </head>
 <body>
   <main>
+    <nav class="topnav" aria-label="Primary">
+      <a href="/" class="active" aria-current="page">Home</a>
+      <a href="/skills/">Skills</a>
+      <a href="/roadmap/">Roadmap</a>
+      <span class="topnav-spacer"></span>
+      <a href="https://github.com/billgernert" rel="me">GitHub</a>
+      <a href="https://www.linkedin.com/in/billgernert" rel="me">LinkedIn</a>
+    </nav>
     <header>
       <!-- parsec-lab logo, inlined from assets/parsec-lab-logo.svg for a zero-request load -->
       <svg class="logo" viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Parsec Lab">
@@ -265,7 +293,7 @@
         <text x="210" y="100" font-family="'Share Tech Mono', monospace" font-size="46" letter-spacing="6" fill="#00d4ff" filter="url(#glow)">PARSEC</text>
         <text x="212" y="142" font-family="'Share Tech Mono', monospace" font-size="28" letter-spacing="14" fill="#e0e8ff">LAB</text>
         <line x1="212" y1="158" x2="500" y2="158" stroke="rgba(0,212,255,0.3)" stroke-width="1"/>
-        <text x="212" y="180" font-family="'Share Tech Mono', monospace" font-size="12" letter-spacing="3" fill="#4a6080">HOMELAB &#183; DEVOPS &#183; INFRASTRUCTURE</text>
+        <text x="212" y="180" font-family="'Share Tech Mono', monospace" font-size="12" letter-spacing="2" fill="#4a6080">AUTOMATIONLAB &#183; DEVOPS &#183; INFRASTRUCTURE</text>
       </svg>
 
       <h1>Bill Gernert</h1>

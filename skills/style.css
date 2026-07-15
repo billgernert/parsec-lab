@@ -62,6 +62,26 @@ a:hover { text-decoration: underline; }
 .crumbs .sep { color: rgba(74, 96, 128, 0.5); }
 .crumbs .here { color: var(--fg); }
 
+/* ---- site-wide top navigation (item 136) ---- */
+.topnav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 18px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin: 0 0 22px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.topnav a { color: var(--muted); }
+.topnav a:hover { color: var(--cyan); text-decoration: none; }
+.topnav a.active { color: var(--fg); }
+.topnav .topnav-spacer { flex: 1 1 auto; }
+@media (max-width: 480px) { .topnav .topnav-spacer { display: none; } }
+
 /* ---- shared eyebrow + headings ---- */
 .eyebrow {
   font-family: var(--mono);
