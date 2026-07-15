@@ -250,6 +250,7 @@
     <nav class="topnav" aria-label="Primary">
       <a href="/" class="active" aria-current="page">Home</a>
       <a href="/skills/">Skills</a>
+      <a href="/ai/">AI</a>
       <a href="/roadmap/">Roadmap</a>
       <span class="topnav-spacer"></span>
       <a href="https://github.com/billgernert" rel="me">GitHub</a>
@@ -321,7 +322,7 @@
                merged-PR API). Edits between each START/END marker are overwritten at sync; the values
                committed here are the last generated snapshot, not hand-typed literals. -->
           <b class="hero-fact"><!--HERO:ITEMS:START-->84<!--HERO:ITEMS:END--></b> backlog items delivered
-          through <b class="hero-fact"><!--HERO:PRS:START-->505<!--HERO:PRS:END--></b> PRs, built with four
+          through <b class="hero-fact"><!--HERO:PRS:START-->512<!--HERO:PRS:END--></b> PRs, built with four
           parallel Claude Code sessions held to a rigid process. I reviewed and approved every one.
           Automation is only as good as its sources of truth, so NetBox owns every IP, Vault owns every
           secret, git owns every definition, and drift has nowhere to live. Recovery is proven, not
@@ -367,6 +368,20 @@
           platform: design docs before code, one PR per change, and a runbook for every pipeline.</p>
       </div>
 
+    </section>
+
+    <section>
+      <h2>AI</h2>
+      <p>
+        AI is both how I built the lab and part of how it runs: a multi-session Claude Code build workflow
+        held to a strict review process, and AI agents inside the platform that triage alerts, analyze
+        incidents, and report on its health. A local LLM carries the bulk; the Claude API handles the hard
+        reasoning; every call is cost-gated and audited like any other dependency, and every action is
+        advisory - it proposes, I approve.
+      </p>
+      <div class="links">
+        <a href="/ai/">How I use AI &#8594;</a>
+      </div>
     </section>
 
     <section>

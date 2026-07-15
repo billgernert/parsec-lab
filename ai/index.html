@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI - Bill Gernert</title>
+  <meta name="description" content="How AI is used in AutomationLab: a multi-session Claude Code build workflow, AI agents in operations, a local LLM plus the Claude API, all cost-gated and audited like any other dependency.">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Crect%20width%3D%27100%27%20height%3D%27100%27%20fill%3D%27%230a0e1a%27%2F%3E%3Cpolygon%20points%3D%2750%2C14%2081%2C32%2081%2C68%2050%2C86%2019%2C68%2019%2C32%27%20fill%3D%27none%27%20stroke%3D%27%2300d4ff%27%20stroke-width%3D%275%27%2F%3E%3Ccircle%20cx%3D%2750%27%20cy%3D%2750%27%20r%3D%279%27%20fill%3D%27%2300ff96%27%2F%3E%3C%2Fsvg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../skills/style.css">
+</head>
+<body>
+  <main class="page-narrow">
+    <nav class="topnav" aria-label="Primary">
+      <a href="/">Home</a>
+      <a href="/skills/">Skills</a>
+      <a href="/ai/" class="active" aria-current="page">AI</a>
+      <a href="/roadmap/">Roadmap</a>
+      <span class="topnav-spacer"></span>
+      <a href="https://github.com/billgernert" rel="me">GitHub</a>
+      <a href="https://www.linkedin.com/in/billgernert" rel="me">LinkedIn</a>
+    </nav>
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <a href="/">parsec-lab.com</a>
+      <span class="sep">/</span>
+      <span class="here">AI</span>
+    </nav>
+
+    <header class="skill-head">
+      <span class="badge">Applied AI</span>
+      <h1>AI, wired in</h1>
+      <p class="descriptor">AI is both how I built AutomationLab and part of how it runs - held to the
+        same discipline as everything else: a design before code, human review on every change, and
+        cost-gated and audited like any other dependency. It writes syntax; I own the planning, the
+        architecture, and the decision to merge.</p>
+    </header>
+
+    <div class="skill-body">
+      <section class="block">
+        <h2>How I build with it: multi-session Claude Code</h2>
+        <p>The lab is built with <b>four parallel Claude Code sessions</b> held to a rigid process: a
+          design doc before any code, one PR per change, a runbook for every pipeline, and <b>mandatory
+          human review - I read and approve every PR before it reaches <code>main</code></b>. The model is
+          fast at the part I deliberately stopped memorizing (syntax from scratch); the planning, the
+          trade-offs, and the merge decision stay mine. The workflow runs against the same branch
+          protection and CI gates as any other contributor, because a machine author is not an excuse to
+          lower the bar.</p>
+      </section>
+
+      <section class="block">
+        <h2>Pipelines, not prompts</h2>
+        <p>AI work is not ad-hoc chat; it runs as <b>pipelines with the same guardrails as everything
+          else</b> - secrets fetched at run time, outputs recorded, fail-closed gates. Nothing an AI
+          produces reaches production without passing the same lint, security-scan, and review gates a
+          human change does. The AI is a contributor inside the process, never a bypass around it.</p>
+      </section>
+
+      <section class="block">
+        <h2>AI in operations: agents that triage, analyze, and report</h2>
+        <p>AI is not just build-time. Agents run inside the platform as scheduled and event-driven jobs:</p>
+        <ul>
+          <li><b>A morning triage chain.</b> Collectors gather signals across the platform - metrics,
+            monitoring, CI, and backups - an LLM triages and correlates them, and a short daily digest
+            lands before I sit down. Novel high-severity patterns become tracked findings, not lost noise.</li>
+          <li><b>Incident enrichment.</b> When something fails, an analyzer summarizes the failure inline
+            with the alert, so the first thing I read is context, not raw logs.</li>
+          <li><b>Scanner triage.</b> Vulnerability and secret-scanner output is triaged by an LLM into
+            exploitable-in-context vs likely-noise verdicts, so a wall of findings becomes a short list
+            worth acting on. The scanners find; the model prioritizes - it never invents a finding.</li>
+        </ul>
+        <p>Every one of these is <b>advisory by construction</b>: the AI proposes, a human approves and
+          applies. Log content and scanner output are treated as untrusted data, delimited and never
+          allowed to steer the model.</p>
+      </section>
+
+      <section class="block">
+        <h2>Local LLM plus the Claude API: the split</h2>
+        <p>Two models, chosen by fit. A <b>local, self-hosted open-weight LLM</b> does the high-volume,
+          zero-cost, privacy-sensitive work - triage, summarization, classification - and never leaves the
+          network. The <b>Claude API</b> is reserved for the harder reasoning where it earns its cost. A
+          single gateway fronts both, so every call is routed, keyed, and metered in one place, and
+          swapping or adding a model is a config change, not a rewrite. Local-first is the default; the
+          paid path is the exception.</p>
+      </section>
+
+      <section class="block">
+        <h2>Cost gating: spend that cannot run away</h2>
+        <p>AI spend is governed by <b>layered, most-restrictive-wins budgets</b>: a per-consumer key
+          budget, a global gateway ceiling, and a <b>fail-closed monthly credit gate</b> that stops spend
+          <em>before</em> it overruns rather than reporting it after the fact. The layers are independent,
+          so no single misconfiguration opens the tap. Because the local model carries the bulk, the actual
+          bill stays near zero - the gates exist to guarantee it, not to explain a surprise.</p>
+      </section>
+
+      <section class="block">
+        <h2>Auditing and the trust boundary</h2>
+        <p>Every AI action is <b>advisory and logged</b>. Triage verdicts, self-heal outcomes, and
+          escalations are recorded so the reasoning is reviewable after the fact - the same audit posture
+          the rest of the platform holds. The line between <b>proposes</b> and <b>does</b> is hard and
+          human-gated: an agent can recommend a fix, open a draft, or raise a finding, but it does not
+          cross into applying a change on its own. AI earns trust the same way every other part of the
+          lab does - by being reviewable, bounded, and honest about what it did.</p>
+      </section>
+
+      <div class="links">
+        <a href="/skills/">Explore the capabilities &#8594;</a>
+        <a href="/roadmap/">Read the roadmap &#8594;</a>
+      </div>
+    </div>
+
+    <footer>
+      <a href="/">&#8592; Home</a> &#183; built and operated by Bill Gernert
+      <p class="disclaimer">Automation lab is a portfolio site. All content is provided as-is, without warranty of any kind, and does not constitute professional advice. Views are my own and do not represent any employer. Unauthorized use of this site or its content is prohibited. Product names and trademarks are the property of their respective owners. Copyright 2026 Bill Gernert. All rights reserved.</p>
+    </footer>
+  </main>
+</body>
+</html>
