@@ -6,15 +6,12 @@
 # Read-only verification of the static site on every push and PR. NO deploy steps (Cloudflare Pages
 # owns deployment) and NO secrets - `permissions: contents: read` is the whole grant.
 name: site-ci
-
 on:
   push:
     branches: [main]
   pull_request:
-
 permissions:
   contents: read
-
 jobs:
   html-validate:
     name: HTML validation (vnu)
@@ -29,8 +26,9 @@ jobs:
       - name: Validate HTML with the Nu Html Checker (vnu)
         # vnu is Java; the ubuntu-latest runner ships a JDK on PATH. Validates every *.html under
         # the repo and exits non-zero on any HTML5 validation error.
-        run: html5validator --root . --log INFO
-
+        # --ignore-re: vnu's CSS parser does not know the scroll-driven animations spec yet
+        # (animation-timeline, index.html); real property, validator lag, not a site error.
+        run: html5validator --root . --log INFO --ignore-re 'CSS. .animation-timeline.. Parse Error'
   link-check:
     name: Internal link check
     runs-on: ubuntu-latest
